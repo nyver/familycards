@@ -123,6 +123,25 @@ tar -xzf /opt/wallet/data/backups/blobs-<timestamp>.tar.gz -C /opt/wallet/data/b
 systemctl start wallet
 ```
 
+## Диагностика: `mkdir /data/blobs: permission denied`
+
+Образ собран на `gcr.io/distroless/static-debian12:nonroot` и работает под непривилегированным пользователем (UID 65532). Docker создаёт именованный volume при первом использовании от имени `root`; `Dockerfile` компенсирует это, копируя в образ пустой каталог `/data` с `--chown=65532:65532`, чтобы свежий volume наследовал верные права при инициализации — но это работает только для **вновь создаваемого** volume, собранного из **обновлённого** образа.
+
+Если ошибка уже возникла (volume был создан старым образом до этого исправления), сам факт пересборки образа её не исправит — Docker не переинициализирует существующий volume. Два варианта:
+
+- Volume ещё пустой (первый запуск ни разу не успел записать `wallet.db`) — можно просто пересоздать его:
+  ```bash
+  docker compose down
+  docker volume rm familycards_wallet-data   # проверьте точное имя: docker volume ls
+  docker compose up -d --build
+  ```
+- В volume уже есть данные — поправьте владельца на месте, не удаляя его:
+  ```bash
+  docker compose down
+  docker run --rm -v familycards_wallet-data:/data alpine chown -R 65532:65532 /data
+  docker compose up -d --build
+  ```
+
 ## 7. Мониторинг
 
 `GET /v1/health` возвращает `{"status","version","db_size","item_count"}` — подходит для внешнего аптайм-мониторинга. Сервер дополнительно пишет в лог структурированную почасовую сводку (`item_count`, `blob_count`, `db_size`) уровнем `info`.
