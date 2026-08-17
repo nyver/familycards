@@ -84,9 +84,18 @@ class _RecoveryPhraseConfirmScreenState
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    result.fold((_) {}, (error) {
-      setState(() => _error = error.message);
-    });
+    result.fold(
+      (_) {
+        // completeBootstrap already transitioned the session to AuthReady;
+        // pop this whole pushed onboarding stack so AuthGate's now-updated
+        // build (the card list) becomes visible again instead of staying
+        // hidden underneath it.
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
+      (error) {
+        setState(() => _error = error.message);
+      },
+    );
   }
 
   @override

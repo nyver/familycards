@@ -47,15 +47,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    result.fold((_) {}, (error) {
-      setState(() {
-        _error = switch (error.kind) {
-          AppErrorKind.network => l10n.loginNoNetwork,
-          AppErrorKind.conflict => l10n.loginDeviceLimitReached,
-          _ => l10n.loginInvalidCredentials,
-        };
-      });
-    });
+    result.fold(
+      (_) {
+        // login() already transitioned the session to AuthReady; pop this
+        // pushed screen (and everything under it back to AuthGate's own
+        // route) so the now-updated card list becomes visible.
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
+      (error) {
+        setState(() {
+          _error = switch (error.kind) {
+            AppErrorKind.network => l10n.loginNoNetwork,
+            AppErrorKind.conflict => l10n.loginDeviceLimitReached,
+            _ => l10n.loginInvalidCredentials,
+          };
+        });
+      },
+    );
   }
 
   @override

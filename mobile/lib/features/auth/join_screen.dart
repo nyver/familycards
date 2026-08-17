@@ -61,17 +61,26 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    result.fold((_) {}, (error) {
-      setState(() {
-        _error = switch (error.kind) {
-          AppErrorKind.gone => l10n.joinInviteExpired,
-          AppErrorKind.invalidRequest => l10n.joinInvalidCode,
-          AppErrorKind.conflict => l10n.joinLoginTakenOrFull,
-          AppErrorKind.crypto => l10n.joinInvalidCode,
-          _ => error.message,
-        };
-      });
-    });
+    result.fold(
+      (_) {
+        // joinByInvite() already transitioned the session to AuthReady;
+        // pop this pushed screen (and everything under it back to
+        // AuthGate's own route) so the now-updated card list becomes
+        // visible.
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
+      (error) {
+        setState(() {
+          _error = switch (error.kind) {
+            AppErrorKind.gone => l10n.joinInviteExpired,
+            AppErrorKind.invalidRequest => l10n.joinInvalidCode,
+            AppErrorKind.conflict => l10n.joinLoginTakenOrFull,
+            AppErrorKind.crypto => l10n.joinInvalidCode,
+            _ => error.message,
+          };
+        });
+      },
+    );
   }
 
   @override

@@ -72,13 +72,22 @@ class _RecoverScreenState extends ConsumerState<RecoverScreen> {
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    result.fold((_) {}, (error) {
-      // Every failure mode here (bad phrase, unknown login, server
-      // rejection) is presented uniformly, matching the login screen's
-      // policy of not distinguishing "wrong secret" from "unknown
-      // account".
-      setState(() => _error = l10n.recoverInvalidPhrase);
-    });
+    result.fold(
+      (_) {
+        // recoverByPhrase() already transitioned the session to AuthReady;
+        // pop this pushed screen (and everything under it back to
+        // AuthGate's own route) so the now-updated card list becomes
+        // visible.
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
+      (error) {
+        // Every failure mode here (bad phrase, unknown login, server
+        // rejection) is presented uniformly, matching the login screen's
+        // policy of not distinguishing "wrong secret" from "unknown
+        // account".
+        setState(() => _error = l10n.recoverInvalidPhrase);
+      },
+    );
   }
 
   @override
