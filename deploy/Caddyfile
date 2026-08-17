@@ -5,6 +5,15 @@
 # reach it directly.
 #
 # Replace wallet.example.com with your actual domain before deploying.
+#
+# If port 443 is already taken on this host (e.g. "address already in
+# use" in `journalctl -u caddy`), you don't have to free it - point the
+# site at a different port instead, e.g. "wallet.example.com:8444 {".
+# Caddy still gets a normal Let's Encrypt certificate as long as port 80
+# is free (used for the ACME HTTP-01 challenge, independently of whatever
+# port the site itself serves on). Use the same "https://host:port" form
+# in the app's server address in that case - the port is only implicit
+# for the standard 443.
 
 wallet.example.com {
 	reverse_proxy 127.0.0.1:8443 {
