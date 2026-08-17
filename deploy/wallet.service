@@ -1,0 +1,30 @@
+[Unit]
+Description=Family Card Wallet sync server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wallet
+Group=wallet
+WorkingDirectory=/opt/wallet
+ExecStart=/opt/wallet/wallet
+Restart=on-failure
+RestartSec=5
+
+# Secrets and configuration - see config.example.yaml for the meaning of
+# each variable. Prefer an EnvironmentFile over inline Environment= lines
+# so secrets are not visible in `systemctl show`.
+EnvironmentFile=/etc/wallet/wallet.env
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/wallet/data
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

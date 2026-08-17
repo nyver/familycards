@@ -1,0 +1,19 @@
+# Example Caddy config for Family Card Wallet.
+# Caddy terminates TLS (automatic Let's Encrypt certificates) and forwards
+# to the wallet process, which should bind only to localhost
+# (WALLET_ADDR=127.0.0.1:8443) since Caddy is the only thing that should
+# reach it directly.
+#
+# Replace wallet.example.com with your actual domain before deploying.
+
+wallet.example.com {
+	reverse_proxy 127.0.0.1:8443 {
+		header_up X-Forwarded-Proto https
+	}
+
+	encode gzip
+
+	log {
+		output file /var/log/caddy/wallet-access.log
+	}
+}

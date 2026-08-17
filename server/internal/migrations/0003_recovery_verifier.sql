@@ -1,0 +1,13 @@
+-- The client-side recovery flow (unwrap VK using RKEK derived from the
+-- 12-word phrase) needs a server-side counterpart the server can actually
+-- authenticate against, or POST /v1/auth/recovery/redeem would let anyone
+-- who merely knows a user's login reset their password - the server has
+-- no way to verify phrase knowledge without a stored verifier, exactly
+-- the same problem password_hash solves for normal login.
+--
+-- verifier_hash is a PHC-formatted argon2id hash of the recovery phrase's
+-- canonical string form, computed server-side from the phrase sent once
+-- at bootstrap time over TLS - the same trust model already used for
+-- passwords (see users.password_hash). It is never derived from RKEK or
+-- the vault key, so it grants no information toward unwrapping VK.
+ALTER TABLE recovery_keys ADD COLUMN verifier_hash TEXT NOT NULL DEFAULT '';

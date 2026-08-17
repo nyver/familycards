@@ -1,0 +1,45 @@
+# Project instructions and planning artifacts (not part of the shipped product)
+AGENTS.md
+CLAUDE.md
+FamilyCards_SQLite_Master_Prompt.md
+openspec/
+.history/
+.claude/
+.agent/
+.agents/
+.gigacode/
+
+# Local configuration and runtime data
+config.yaml
+server/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Documents
+*.doc
+*.docx
+
+# Go
+server/wallet
+server/wallet.exe
+server/*.test
+server/coverage.out
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/**/generated_plugin_registrant.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

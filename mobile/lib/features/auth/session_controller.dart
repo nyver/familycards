@@ -1,0 +1,495 @@
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/crypto/argon2.dart';
+import '../../core/crypto/envelope.dart';
+import '../../core/crypto/invite_code.dart';
+import '../../core/crypto/recovery_phrase.dart';
+import '../../core/crypto/vault_key.dart';
+import '../../core/db/database.dart';
+import '../../core/net/api_client.dart';
+import '../../core/net/dto/dto.dart';
+import '../../core/net/secure_token_store.dart';
+import '../../core/result.dart';
+import '../../core/storage/key_value_store.dart';
+import 'auth_state.dart';
+import 'identity_store.dart';
+
+/// A freshly generated, not-yet-persisted vault: the material needed to
+/// show the recovery phrase for confirmation before any network call is
+/// made (see the "create vault" flow's ordering requirement).
+class PendingVault {
+  final SecretKey vaultKey;
+  final List<String> phraseWords;
+  const PendingVault({required this.vaultKey, required this.phraseWords});
+}
+
+/// Owns the app's session lifecycle: server selection, account creation,
+/// login, invite redemption, phrase-based recovery, and vault key
+/// unlock/lock. Backed by secure storage for everything that must survive
+/// a restart, and by [VaultKeyHolder] for the key itself, which never
+/// touches disk unless biometric unlock is enabled (see
+/// core/crypto/vault_key.dart).
+class SessionController extends StateNotifier<AuthState> {
+  final AppDatabase database;
+  final IdentityStore identityStore;
+  final VaultKeyHolder vaultKeyHolder;
+  late final SecureTokenStore tokenStore;
+  late final ApiClient apiClient;
+
+  /// [keyValueStore], if given, backs both the identity store and the
+  /// token store (an in-memory fake in tests, avoiding a dependency on
+  /// real platform secure storage). Ignored if [identityStore] is also
+  /// given explicitly.
+  SessionController({
+    required this.database,
+    IdentityStore? identityStore,
+    VaultKeyHolder? vaultKeyHolder,
+    KeyValueStore? keyValueStore,
+  }) : identityStore = identityStore ?? IdentityStore(storage: keyValueStore),
+       vaultKeyHolder = vaultKeyHolder ?? VaultKeyHolder(),
+       super(const AuthLoading()) {
+    tokenStore = SecureTokenStore(
+      storage: keyValueStore,
+      onSessionExpiredCallback: _handleSessionExpired,
+    );
+    apiClient = ApiClient(baseUrl: '', tokenStore: tokenStore);
+    _init();
+  }
+
+  Future<void> _init() async {
+    final address = await identityStore.getServerAddress();
+    if (address == null) {
+      state = const AuthNeedsServer();
+      return;
+    }
+    apiClient.setBaseUrl(address);
+
+    final identity = await identityStore.load();
+    if (identity == null) {
+      state = AuthNeedsOnboarding(address);
+      return;
+    }
+    state = AuthNeedsUnlock(identity);
+  }
+
+  Future<void> _handleSessionExpired() async {
+    vaultKeyHolder.lock();
+    final identity = await identityStore.load();
+    if (identity != null) {
+      state = AuthNeedsUnlock(identity);
+    }
+  }
+
+  /// Normalizes user-entered server input into a full URL, defaulting to
+  /// https when no scheme is given.
+  static String normalizeServerAddress(String input) {
+    final trimmed = input.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return 'https://$trimmed';
+  }
+
+  /// Checks a candidate server address via GET /v1/health and, if it
+  /// responds like a compatible server, persists it and moves to
+  /// onboarding. Does not change state on failure - the caller shows the
+  /// returned error and lets the user retry.
+  Future<Result<void>> checkAndSetServer(String rawAddress) async {
+    final address = normalizeServerAddress(rawAddress);
+    final previousBaseUrl = apiClient.currentBaseUrl;
+    apiClient.setBaseUrl(address);
+
+    final result = await apiClient.health();
+    return result.fold(
+      (health) async {
+        await identityStore.setServerAddress(address);
+        state = AuthNeedsOnboarding(address);
+        return const Result.ok(null);
+      },
+      (error) {
+        apiClient.setBaseUrl(previousBaseUrl);
+        return Result.err(error);
+      },
+    );
+  }
+
+  /// Phase 1 of vault creation: generates VK and a recovery phrase purely
+  /// locally, with no network call, so the UI can show the phrase for
+  /// confirmation before anything is sent to the server.
+  Future<PendingVault> prepareNewVault(List<String> bip39Wordlist) async {
+    final vaultKey = await generateVaultKey();
+    final phrase = await RecoveryPhrase.generate(bip39Wordlist);
+    return PendingVault(vaultKey: vaultKey, phraseWords: phrase);
+  }
+
+  /// Phase 2: called only after the user has confirmed the recovery
+  /// phrase. Derives KEK and RKEK, wraps VK under both, and calls
+  /// bootstrap.
+  Future<Result<void>> completeBootstrap({
+    required PendingVault vault,
+    required String login,
+    required String displayName,
+    required String password,
+    required String bootstrapToken,
+    required String deviceName,
+    required String devicePlatform,
+  }) async {
+    final kdfSalt = _randomSalt();
+    final kek = await deriveKeyEncryptionKey(
+      password: password,
+      salt: kdfSalt,
+      params: Argon2Params.defaults,
+    );
+    final passwordWrap = await wrapVaultKeyWithPasswordOrRecoveryKey(
+      vaultKey: vault.vaultKey,
+      keyEncryptionKey: kek,
+    );
+
+    final recoverySalt = _randomSalt();
+    final rkek = await deriveKeyEncryptionKey(
+      password: RecoveryPhrase.toKdfInput(vault.phraseWords),
+      salt: recoverySalt,
+      params: Argon2Params.defaults,
+    );
+    final recoveryWrap = await wrapVaultKeyWithPasswordOrRecoveryKey(
+      vaultKey: vault.vaultKey,
+      keyEncryptionKey: rkek,
+    );
+
+    final req = BootstrapRequest(
+      login: login,
+      displayName: displayName,
+      password: password,
+      kdfSalt: _b64(kdfSalt),
+      kdfParams: Argon2Params.defaults.toJson(),
+      wrappedVaultKey: _b64(passwordWrap.ciphertext),
+      wrapNonce: _b64(passwordWrap.nonce),
+      recovery: RecoveryDto(
+        wrappedVaultKey: _b64(recoveryWrap.ciphertext),
+        wrapNonce: _b64(recoveryWrap.nonce),
+        kdfSalt: _b64(recoverySalt),
+        kdfParams: Argon2Params.defaults.toJson(),
+        verifier: RecoveryPhrase.toKdfInput(vault.phraseWords),
+      ),
+      device: DeviceDto(name: deviceName, platform: devicePlatform),
+    );
+
+    final result = await apiClient.bootstrap(
+      req,
+      bootstrapToken: bootstrapToken,
+    );
+    return result.fold((session) async {
+      await _completeSession(
+        session: session,
+        login: login,
+        displayName: displayName,
+        kdfSalt: req.kdfSalt,
+        kdfParams: req.kdfParams,
+        wrappedVaultKey: req.wrappedVaultKey,
+        wrapNonce: req.wrapNonce,
+        vaultKey: vault.vaultKey,
+      );
+      return const Result.ok(null);
+    }, (error) => Result.err(error));
+  }
+
+  Future<Result<void>> login({
+    required String login,
+    required String password,
+    required String deviceName,
+    required String devicePlatform,
+  }) async {
+    final preResult = await apiClient.prelogin(login);
+    return preResult.fold((pre) async {
+      final kek = await deriveKeyEncryptionKey(
+        password: password,
+        salt: _fromB64(pre.kdfSalt),
+        params: Argon2Params.fromJson(pre.kdfParams),
+      );
+
+      final loginResult = await apiClient.login(
+        login: login,
+        password: password,
+        device: DeviceDto(name: deviceName, platform: devicePlatform),
+      );
+      return loginResult.fold((session) async {
+        SecretKey vaultKey;
+        try {
+          final vkBytes = await unwrapVaultKeyWithPasswordOrRecoveryKey(
+            envelope: Envelope(
+              nonce: _fromB64(session.wrapNonce!),
+              ciphertext: _fromB64(session.wrappedVaultKey!),
+            ),
+            keyEncryptionKey: kek,
+          );
+          vaultKey = vkBytes;
+        } on DecryptionFailedException catch (e) {
+          return Result.err(
+            AppError.crypto('Failed to unlock the vault key', cause: e),
+          );
+        }
+
+        await _completeSession(
+          session: session,
+          login: login,
+          displayName: login,
+          kdfSalt: session.kdfSalt!,
+          kdfParams: session.kdfParams!,
+          wrappedVaultKey: session.wrappedVaultKey!,
+          wrapNonce: session.wrapNonce!,
+          vaultKey: vaultKey,
+        );
+        return const Result.ok(null);
+      }, (error) => Result.err(error));
+    }, (error) => Result.err(error));
+  }
+
+  Future<Result<void>> joinByInvite({
+    required String rawCode,
+    required String login,
+    required String displayName,
+    required String password,
+    required String deviceName,
+    required String devicePlatform,
+  }) async {
+    final normalizedCode = InviteCode.normalize(rawCode);
+    if (normalizedCode == null) {
+      return Result.err(AppError.invalidRequest('Invalid invite code'));
+    }
+    final codeHash = await _sha256Hex(normalizedCode);
+
+    final inviteResult = await apiClient.getInvite(codeHash);
+    return inviteResult.fold((invite) async {
+      final ikek = await deriveKeyEncryptionKey(
+        password: normalizedCode,
+        salt: _fromB64(invite.kdfSalt),
+        params: Argon2Params.fromJson(invite.kdfParams),
+      );
+
+      SecretKey vaultKey;
+      try {
+        vaultKey = await unwrapVaultKeyWithInviteKey(
+          envelope: Envelope(
+            nonce: _fromB64(invite.wrapNonce),
+            ciphertext: _fromB64(invite.wrappedVaultKey),
+          ),
+          inviteKeyEncryptionKey: ikek,
+        );
+      } on DecryptionFailedException catch (e) {
+        return Result.err(AppError.crypto('Invalid invite code', cause: e));
+      }
+
+      final ownSalt = _randomSalt();
+      final ownKek = await deriveKeyEncryptionKey(
+        password: password,
+        salt: ownSalt,
+        params: Argon2Params.defaults,
+      );
+      final ownWrap = await wrapVaultKeyWithPasswordOrRecoveryKey(
+        vaultKey: vaultKey,
+        keyEncryptionKey: ownKek,
+      );
+
+      final redeemResult = await apiClient.redeemInvite(
+        codeHash: codeHash,
+        login: login,
+        displayName: displayName,
+        password: password,
+        kdfSalt: _b64(ownSalt),
+        kdfParams: Argon2Params.defaults.toJson(),
+        wrappedVaultKey: _b64(ownWrap.ciphertext),
+        wrapNonce: _b64(ownWrap.nonce),
+        device: DeviceDto(name: deviceName, platform: devicePlatform),
+      );
+      return redeemResult.fold((session) async {
+        await _completeSession(
+          session: session,
+          login: login,
+          displayName: displayName,
+          kdfSalt: _b64(ownSalt),
+          kdfParams: Argon2Params.defaults.toJson(),
+          wrappedVaultKey: _b64(ownWrap.ciphertext),
+          wrapNonce: _b64(ownWrap.nonce),
+          vaultKey: vaultKey,
+        );
+        return const Result.ok(null);
+      }, (error) => Result.err(error));
+    }, (error) => Result.err(error));
+  }
+
+  Future<Result<void>> recoverByPhrase({
+    required String login,
+    required List<String> phraseWords,
+    required String newPassword,
+    required List<String> bip39Wordlist,
+    required String deviceName,
+    required String devicePlatform,
+  }) async {
+    final isValid = await RecoveryPhrase.validate(phraseWords, bip39Wordlist);
+    if (!isValid) {
+      return Result.err(AppError.invalidRequest('Invalid recovery phrase'));
+    }
+
+    final preResult = await apiClient.recoveryPrelogin(login);
+    return preResult.fold((pre) async {
+      final rkek = await deriveKeyEncryptionKey(
+        password: RecoveryPhrase.toKdfInput(phraseWords),
+        salt: _fromB64(pre.kdfSalt),
+        params: Argon2Params.fromJson(pre.kdfParams),
+      );
+
+      // recovery/prelogin returns the wrap directly (mirroring how
+      // login returns it after password verification) - it is safe to
+      // hand out unconditionally because it is useless without RKEK,
+      // which requires the actual phrase to derive. See docs/API.md.
+      SecretKey vaultKey;
+      try {
+        vaultKey = await unwrapVaultKeyWithPasswordOrRecoveryKey(
+          envelope: Envelope(
+            nonce: _fromB64(pre.wrapNonce),
+            ciphertext: _fromB64(pre.wrappedVaultKey),
+          ),
+          keyEncryptionKey: rkek,
+        );
+      } on DecryptionFailedException catch (e) {
+        return Result.err(AppError.crypto('Invalid recovery phrase', cause: e));
+      }
+
+      final newSalt = _randomSalt();
+      final newKek = await deriveKeyEncryptionKey(
+        password: newPassword,
+        salt: newSalt,
+        params: Argon2Params.defaults,
+      );
+      final newWrap = await wrapVaultKeyWithPasswordOrRecoveryKey(
+        vaultKey: vaultKey,
+        keyEncryptionKey: newKek,
+      );
+
+      final redeemResult = await apiClient.recoveryRedeem(
+        login: login,
+        verifier: RecoveryPhrase.toKdfInput(phraseWords),
+        newPassword: newPassword,
+        kdfSalt: _b64(newSalt),
+        kdfParams: Argon2Params.defaults.toJson(),
+        wrappedVaultKey: _b64(newWrap.ciphertext),
+        wrapNonce: _b64(newWrap.nonce),
+        device: DeviceDto(name: deviceName, platform: devicePlatform),
+      );
+      return redeemResult.fold((session) async {
+        await _completeSession(
+          session: session,
+          login: login,
+          displayName: login,
+          kdfSalt: _b64(newSalt),
+          kdfParams: Argon2Params.defaults.toJson(),
+          wrappedVaultKey: _b64(newWrap.ciphertext),
+          wrapNonce: _b64(newWrap.nonce),
+          vaultKey: vaultKey,
+        );
+        return const Result.ok(null);
+      }, (error) => Result.err(error));
+    }, (error) => Result.err(error));
+  }
+
+  /// Unlocks an existing local identity with the account password
+  /// (post-cold-start or after the background timeout).
+  Future<Result<void>> unlockWithPassword(String password) async {
+    final identityState = state;
+    if (identityState is! AuthNeedsUnlock) {
+      return Result.err(AppError.unknown('No identity pending unlock'));
+    }
+    final identity = identityState.identity;
+
+    final kek = await deriveKeyEncryptionKey(
+      password: password,
+      salt: _fromB64(identity.kdfSalt),
+      params: Argon2Params.fromJson(identity.kdfParams),
+    );
+    try {
+      final vaultKey = await unwrapVaultKeyWithPasswordOrRecoveryKey(
+        envelope: Envelope(
+          nonce: _fromB64(identity.wrapNonce),
+          ciphertext: _fromB64(identity.wrappedVaultKey),
+        ),
+        keyEncryptionKey: kek,
+      );
+      vaultKeyHolder.unlock(vaultKey);
+      state = AuthReady(identity);
+      return const Result.ok(null);
+    } on DecryptionFailedException catch (e) {
+      return Result.err(AppError.crypto('Incorrect password', cause: e));
+    }
+  }
+
+  /// Wipes all local state (identity, tokens, vault key, and the local
+  /// database) and returns to server selection - used when the user
+  /// changes to a different server, which invalidates everything local.
+  Future<void> changeServerAndWipeLocalData(String newAddress) async {
+    await database.cardsDao.watchVisibleCards().first; // ensure db is open
+    for (final table in database.allTables) {
+      await database.delete(table).go();
+    }
+    await identityStore.clearAll();
+    await tokenStore.clear();
+    vaultKeyHolder.lock();
+
+    final normalized = normalizeServerAddress(newAddress);
+    apiClient.setBaseUrl(normalized);
+    state = const AuthNeedsServer();
+  }
+
+  Future<void> _completeSession({
+    required SessionResponse session,
+    required String login,
+    required String displayName,
+    required String kdfSalt,
+    required Map<String, dynamic> kdfParams,
+    required String wrappedVaultKey,
+    required String wrapNonce,
+    required SecretKey vaultKey,
+  }) async {
+    await tokenStore.setTokens(
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+    );
+
+    final identity = StoredIdentity(
+      serverAddress: apiClient.currentBaseUrl,
+      userId: session.userId,
+      vaultId: session.vaultId,
+      deviceId: session.deviceId,
+      login: login,
+      displayName: displayName,
+      kdfSalt: kdfSalt,
+      kdfParams: kdfParams,
+      wrappedVaultKey: wrappedVaultKey,
+      wrapNonce: wrapNonce,
+    );
+    await identityStore.save(identity);
+
+    vaultKeyHolder.unlock(vaultKey);
+    state = AuthReady(identity);
+  }
+
+  Uint8List _randomSalt() => _randomBytes(16);
+}
+
+Uint8List _randomBytes(int length) {
+  final random = Random.secure();
+  return Uint8List.fromList(List.generate(length, (_) => random.nextInt(256)));
+}
+
+String _b64(List<int> bytes) => base64.encode(bytes);
+
+Uint8List _fromB64(String s) => base64.decode(s);
+
+Future<String> _sha256Hex(String input) async {
+  final digest = await Sha256().hash(utf8.encode(input));
+  return digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}

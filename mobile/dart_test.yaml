@@ -1,0 +1,6 @@
+tags:
+  integration:
+    # These tests build and launch the real Go server as a subprocess
+    # (see test/features/auth/test_server.dart) and are slower than the
+    # rest of the suite. Included by default `flutter test`; exclude with
+    # `flutter test --exclude-tags=integration` for a fast inner loop.

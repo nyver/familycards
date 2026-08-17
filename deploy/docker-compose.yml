@@ -1,0 +1,23 @@
+services:
+  wallet:
+    build:
+      context: ../server
+    image: familycards/wallet:latest
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    environment:
+      WALLET_ADDR: ":8443"
+      WALLET_DB_PATH: "/data/wallet.db"
+      WALLET_BLOB_DIR: "/data/blobs"
+      WALLET_JWT_SECRET: "${WALLET_JWT_SECRET:?WALLET_JWT_SECRET must be set, at least 32 bytes}"
+      WALLET_BOOTSTRAP_TOKEN: "${WALLET_BOOTSTRAP_TOKEN:?WALLET_BOOTSTRAP_TOKEN must be set}"
+      WALLET_ADMIN_TOKEN: "${WALLET_ADMIN_TOKEN:-}"
+      WALLET_LOG_LEVEL: "${WALLET_LOG_LEVEL:-info}"
+      WALLET_ALLOW_INSECURE: "${WALLET_ALLOW_INSECURE:-false}"
+      WALLET_TOMBSTONE_DAYS: "${WALLET_TOMBSTONE_DAYS:-90}"
+    volumes:
+      - wallet-data:/data
+
+volumes:
+  wallet-data:

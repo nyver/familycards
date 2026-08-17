@@ -1,0 +1,59 @@
+name: mobile
+description: "Family Card Wallet - a self-hosted, end-to-end encrypted family loyalty card wallet."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  drift: ^2.34.3
+  sqlite3_flutter_libs: ^0.5.0
+  dio: ^5.11.0
+  riverpod: ^2.6.1
+  flutter_riverpod: ^2.6.1
+  mobile_scanner: ^7.4.0
+  barcode_widget: ^2.0.4
+  cryptography: ^2.9.0
+  flutter_secure_storage: ^11.0.0
+  screen_brightness: ^2.1.11
+  wakelock_plus: ^1.7.0
+  image_picker: ^1.2.3
+  flutter_image_compress: ^2.5.1
+  path_provider: ^2.1.6
+  uuid: ^4.6.0
+  intl: ^0.20.3
+  qr_flutter: ^4.1.0
+  share_plus: ^13.3.0
+  local_auth: ^2.3.0
+  path: ^1.9.0
+  barcode: ^2.2.9
+  connectivity_plus: ^6.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.34.5
+  build_runner: ^2.16.0
+  # Used directly in tests to fake the screen-brightness/wakelock platform
+  # channels (see test/features/cards/card_detail_screen_test.dart).
+  screen_brightness_platform_interface: ^2.1.2
+  wakelock_plus_platform_interface: ^1.6.0
+  plugin_platform_interface: ^2.1.8
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/bip39/english.txt
+    - assets/stores/catalog.json
+    - assets/stores/logos/

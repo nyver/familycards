@@ -1,0 +1,47 @@
+# Family Card Wallet server configuration reference.
+#
+# The server itself reads configuration exclusively from environment
+# variables (see server/internal/config), not from a YAML file - there is
+# no YAML parser in the server. This file documents every variable in one
+# place; copy the values you need into your environment, into
+# deploy/wallet.service's EnvironmentFile, or into a .env file consumed by
+# `docker compose --env-file`.
+
+# Address the server listens on. Bind to 127.0.0.1:8443 when running
+# behind a reverse proxy (see deploy/Caddyfile); bind to :8443 to listen on
+# all interfaces directly.
+WALLET_ADDR: ":8443"
+
+# Path to the SQLite database file. The containing directory is created
+# automatically if it does not exist.
+WALLET_DB_PATH: "data/wallet.db"
+
+# Directory where encrypted card photo blobs are stored, laid out as
+# <dir>/<vault_id>/<blob_id[0:2]>/<blob_id[2:4]>/<blob_id>.
+WALLET_BLOB_DIR: "data/blobs"
+
+# Secret used to sign access tokens (JWT HS256). Required, at least 32
+# bytes. Generate one with: openssl rand -base64 32
+WALLET_JWT_SECRET: "REPLACE_WITH_A_RANDOM_SECRET_AT_LEAST_32_BYTES_LONG"
+
+# One-time token required to call POST /v1/auth/bootstrap, which creates
+# the family vault and its first user. Set it, run bootstrap once from the
+# mobile app, then you may remove it - a second bootstrap is refused by
+# the server regardless (409) once any user exists.
+WALLET_BOOTSTRAP_TOKEN: "REPLACE_WITH_A_RANDOM_TOKEN"
+
+# Token required (as X-Admin-Token) to call POST /v1/admin/backup. Leave
+# unset to disable the backup endpoint entirely (it then responds 404).
+WALLET_ADMIN_TOKEN: ""
+
+# slog log level: debug | info | warn | error.
+WALLET_LOG_LEVEL: "info"
+
+# Set to "true" only for local development without TLS. In this mode the
+# server also stops trusting X-Forwarded-For for rate limiting, since
+# there is no reverse proxy to have set it. Never set this in production.
+WALLET_ALLOW_INSECURE: "false"
+
+# How many days a deleted card (tombstone) is retained before being
+# physically purged from the database.
+WALLET_TOMBSTONE_DAYS: 90
