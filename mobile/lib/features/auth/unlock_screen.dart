@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import 'auth_providers.dart';
 import 'identity_store.dart';
 
 /// Shown when a local identity exists but the vault key is not in memory
-/// (cold start, or the background lock timeout elapsed). Biometric unlock
-/// (when enabled) is wired up in features/settings; this screen always
-/// offers the password fallback.
+/// (cold start, or the background lock timeout elapsed). Offers biometric
+/// unlock when it is both enabled (see features/settings/security_screen)
+/// and currently available on the device; always offers the password
+/// fallback, per "приложение SHALL предоставлять парольный запасной путь".
 class UnlockScreen extends ConsumerStatefulWidget {
   final StoredIdentity identity;
   const UnlockScreen({super.key, required this.identity});
@@ -21,11 +23,50 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
   final _passwordController = TextEditingController();
   bool _submitting = false;
   String? _error;
+  bool? _biometricsOffered;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final enabled = await ref
+        .read(securitySettingsStoreProvider)
+        .isBiometricEnabled();
+    if (!enabled) {
+      if (mounted) setState(() => _biometricsOffered = false);
+      return;
+    }
+    final available = await ref
+        .read(biometricAuthenticatorProvider)
+        .isAvailable();
+    if (mounted) setState(() => _biometricsOffered = available);
+    if (available) await _unlockWithBiometrics();
+  }
 
   @override
   void dispose() {
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _unlockWithBiometrics() async {
+    final l10n = AppLocalizations.of(context)!;
+    final authenticated = await ref
+        .read(biometricAuthenticatorProvider)
+        .authenticate(l10n.unlockGreeting(widget.identity.displayName));
+    if (!authenticated || !mounted) return;
+
+    final result = await ref
+        .read(sessionControllerProvider.notifier)
+        .unlockWithBiometrics();
+    if (!mounted) return;
+    result.fold((_) {}, (_) {
+      // Fall through to the password field silently - the persisted key
+      // may have been cleared elsewhere; no need to alarm the user.
+    });
   }
 
   Future<void> _submit() async {
@@ -87,6 +128,14 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                       )
                     : Text(l10n.unlockButton),
               ),
+              if (_biometricsOffered == true) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _submitting ? null : _unlockWithBiometrics,
+                  icon: const Icon(Icons.fingerprint),
+                  label: Text(l10n.unlockBiometricButton),
+                ),
+              ],
             ],
           ),
         ),

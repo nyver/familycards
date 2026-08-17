@@ -1,5 +1,7 @@
 package com.familycards.mobile
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// local_auth requires a FragmentActivity host to show the biometric prompt
+// (see features/settings/security_screen.dart).
+class MainActivity : FlutterFragmentActivity()

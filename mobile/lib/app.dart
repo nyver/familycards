@@ -117,9 +117,17 @@ class _AuthenticatedShellState extends ConsumerState<_AuthenticatedShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final sessionController = ref.read(sessionControllerProvider.notifier);
     if (state == AppLifecycleState.resumed) {
+      sessionController.enterForeground();
+      // enterForeground() may have found the background-lock timeout
+      // elapsed and moved the app out of AuthReady, in which case this
+      // widget is about to be unmounted by AuthGate and there is nothing
+      // left here to sync.
+      if (ref.read(sessionControllerProvider) is! AuthReady) return;
       ref.read(syncControllerProvider.notifier).onAppForeground();
     } else if (state == AppLifecycleState.paused) {
+      sessionController.enterBackground();
       ref.read(syncControllerProvider.notifier).onAppBackground();
     }
   }

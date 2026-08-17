@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/db/database.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
-import '../auth/change_server_screen.dart';
+import '../settings/settings_screen.dart';
 import '../sync/sync_status_provider.dart';
 import 'card_detail_screen.dart';
 import 'card_editor_screen.dart';
@@ -44,11 +44,11 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
         actions: [
           const SyncStatusIndicator(),
           IconButton(
-            icon: const Icon(Icons.dns_outlined),
-            tooltip: l10n.changeServerTitle,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ChangeServerScreen()),
-            ),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.settingsTitle,
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
           ),
         ],
       ),

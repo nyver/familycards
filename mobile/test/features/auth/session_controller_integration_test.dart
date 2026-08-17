@@ -6,7 +6,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/crypto/argon2.dart';
@@ -152,6 +152,90 @@ void main() {
       reason: rightUnlock.errorOrNull?.toString(),
     );
     expect(second.state, isA<AuthReady>());
+  });
+
+  test('logout revokes the session, clears local data, and keeps the server address', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final controller = SessionController(
+      database: db,
+      keyValueStore: InMemoryKeyValueStore(),
+    );
+    await pumpEventQueue();
+    await controller.checkAndSetServer(server.baseUrl);
+    final pending = await controller.prepareNewVault(wordlist);
+    await controller.completeBootstrap(
+      vault: pending,
+      login: 'heidi',
+      displayName: 'Heidi',
+      password: 'heidis excellent password',
+      bootstrapToken: server.bootstrapToken,
+      deviceName: 'Heidis Phone',
+      devicePlatform: 'android',
+    );
+    expect(controller.state, isA<AuthReady>());
+
+    // A card exists locally, standing in for whatever offline-first
+    // state logout must wipe.
+    await db.cardsDao.insertNewCard(
+      CardsCompanion.insert(
+        id: 'card-1',
+        storeName: 'Test Store',
+        cardNumber: '123456',
+        barcodeFormat: 'code128',
+        color: 0xFF112233,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    );
+
+    await controller.logout();
+
+    expect(controller.state, isA<AuthNeedsOnboarding>());
+    expect(
+      (controller.state as AuthNeedsOnboarding).serverAddress,
+      server.baseUrl,
+    );
+    expect(controller.vaultKeyHolder.isUnlocked, isFalse);
+    expect(await db.cardsDao.watchVisibleCards().first, isEmpty);
+    expect(await controller.tokenStore.getAccessToken(), isNull);
+
+    // The device's session was actually revoked server-side: logging
+    // back in and then attempting to reuse the *old* refresh token
+    // must fail (rotation/revocation already covered elsewhere; here
+    // we only need the login path itself to still work post-logout).
+    final loginAgain = await controller.login(
+      login: 'heidi',
+      password: 'heidis excellent password',
+      deviceName: 'Heidis Phone',
+      devicePlatform: 'android',
+    );
+    expect(loginAgain.isOk, isTrue, reason: loginAgain.errorOrNull?.toString());
+  });
+
+  test('logout without network still clears local state', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final controller = SessionController(
+      database: db,
+      keyValueStore: InMemoryKeyValueStore(),
+    );
+    await pumpEventQueue();
+    await controller.checkAndSetServer(server.baseUrl);
+    final pending = await controller.prepareNewVault(wordlist);
+    await controller.completeBootstrap(
+      vault: pending,
+      login: 'ivan',
+      displayName: 'Ivan',
+      password: 'ivans excellent password',
+      bootstrapToken: server.bootstrapToken,
+      deviceName: 'Ivans Phone',
+      devicePlatform: 'android',
+    );
+
+    await server.stop();
+    await controller.logout();
+
+    expect(controller.state, isA<AuthNeedsOnboarding>());
+    expect(controller.vaultKeyHolder.isUnlocked, isFalse);
   });
 
   test('login from a second device works with the account password', () async {

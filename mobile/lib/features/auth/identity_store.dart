@@ -84,10 +84,18 @@ class IdentityStore {
     await setServerAddress(identity.serverAddress);
   }
 
-  /// Clears the identity and server address - used when signing out or
-  /// switching to a different server (which invalidates all local state).
+  /// Clears the identity and server address - used when switching to a
+  /// different server (which invalidates all local state, including
+  /// which server to talk to).
   Future<void> clearAll() async {
     await _storage.delete(_identityKey);
     await _storage.delete(_serverAddressKey);
+  }
+
+  /// Clears only the identity, keeping the server address - used for
+  /// sign-out, where the user returns to onboarding against the same
+  /// server rather than to server selection.
+  Future<void> clearIdentity() async {
+    await _storage.delete(_identityKey);
   }
 }

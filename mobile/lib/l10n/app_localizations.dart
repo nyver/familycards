@@ -637,6 +637,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get commonRetry;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsMembersTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Family members'**
+  String get settingsMembersTile;
+
+  /// No description provided for @settingsSecurityTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get settingsSecurityTile;
+
+  /// No description provided for @settingsTrashTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Trash'**
+  String get settingsTrashTile;
+
+  /// No description provided for @settingsExportTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Export data'**
+  String get settingsExportTile;
+
+  /// No description provided for @settingsServerTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get settingsServerTile;
+
+  /// No description provided for @settingsLogoutTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get settingsLogoutTile;
+
+  /// No description provided for @membersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Family members'**
+  String get membersTitle;
+
+  /// No description provided for @membersNoNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the internet to see the member list.'**
+  String get membersNoNetwork;
+
+  /// No description provided for @membersRevokeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke access'**
+  String get membersRevokeButton;
+
+  /// No description provided for @membersRevokeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke access?'**
+  String get membersRevokeConfirmTitle;
+
+  /// No description provided for @membersRevokeConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} will lose access to the family vault on all of their devices.'**
+  String membersRevokeConfirmBody(String name);
+
+  /// No description provided for @membersRevokedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'revoked'**
+  String get membersRevokedLabel;
+
+  /// No description provided for @membersDeviceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0 {No devices} one {1 device} other {{count} devices}}'**
+  String membersDeviceCount(int count);
+
+  /// No description provided for @inviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a member'**
+  String get inviteTitle;
+
+  /// No description provided for @inviteGenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate invite code'**
+  String get inviteGenerateButton;
+
+  /// No description provided for @inviteExpiresAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires: {date}'**
+  String inviteExpiresAt(String date);
+
+  /// No description provided for @inviteShareButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get inviteShareButton;
+
+  /// No description provided for @inviteCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel invite'**
+  String get inviteCancelButton;
+
+  /// No description provided for @inviteCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This invite code will no longer work.'**
+  String get inviteCancelConfirm;
+
+  /// No description provided for @inviteCancelledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This invite has been cancelled.'**
+  String get inviteCancelledMessage;
+
+  /// No description provided for @inviteLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'The family vault is full - remove a member or wait for a pending invite to expire.'**
+  String get inviteLimitReached;
+
+  /// No description provided for @securityBiometricTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get securityBiometricTitle;
+
+  /// No description provided for @securityBiometricToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock with biometrics'**
+  String get securityBiometricToggle;
+
+  /// No description provided for @securityBiometricUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock is not available on this device.'**
+  String get securityBiometricUnavailable;
+
+  /// No description provided for @securityBiometricConfirmReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm to enable biometric unlock'**
+  String get securityBiometricConfirmReason;
+
+  /// No description provided for @securityAutoLockNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'The app always locks itself automatically after 5 minutes in the background.'**
+  String get securityAutoLockNotice;
+
+  /// No description provided for @unlockBiometricButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock with biometrics'**
+  String get unlockBiometricButton;
+
+  /// No description provided for @trashTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trash'**
+  String get trashTitle;
+
+  /// No description provided for @trashEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Trash is empty.'**
+  String get trashEmpty;
+
+  /// No description provided for @trashRestoreButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get trashRestoreButton;
+
+  /// No description provided for @trashDeleteForeverButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete forever'**
+  String get trashDeleteForeverButton;
+
+  /// No description provided for @trashDeleteForeverConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete forever?'**
+  String get trashDeleteForeverConfirmTitle;
+
+  /// No description provided for @trashDeleteForeverConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This card cannot be recovered after this.'**
+  String get trashDeleteForeverConfirmBody;
+
+  /// No description provided for @trashDaysRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =0 {Removed today} one {1 day left} other {{days} days left}}'**
+  String trashDaysRemaining(int days);
+
+  /// No description provided for @exportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export data'**
+  String get exportTitle;
+
+  /// No description provided for @exportPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive password'**
+  String get exportPasswordLabel;
+
+  /// No description provided for @exportPasswordConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get exportPasswordConfirmLabel;
+
+  /// No description provided for @exportWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The archive will contain every card number in this vault. Keep the file and its password safe.'**
+  String get exportWarning;
+
+  /// No description provided for @exportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportButton;
+
+  /// No description provided for @exportPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords don\'t match'**
+  String get exportPasswordMismatch;
+
+  /// No description provided for @exportSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export complete'**
+  String get exportSuccessTitle;
+
+  /// No description provided for @exportSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String exportSuccessBody(String path);
+
+  /// No description provided for @exportShareButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Share file'**
+  String get exportShareButton;
+
+  /// No description provided for @serverSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get serverSettingsTitle;
+
+  /// No description provided for @serverSettingsAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Server address'**
+  String get serverSettingsAddressLabel;
+
+  /// No description provided for @serverSettingsReachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Reachable'**
+  String get serverSettingsReachable;
+
+  /// No description provided for @serverSettingsUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get serverSettingsUnreachable;
+
+  /// No description provided for @serverSettingsLastSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Last successful sync'**
+  String get serverSettingsLastSync;
+
+  /// No description provided for @serverSettingsPendingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsynced changes'**
+  String get serverSettingsPendingCount;
+
+  /// No description provided for @serverSettingsForceSyncButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get serverSettingsForceSyncButton;
+
+  /// No description provided for @serverSettingsChangeAddressButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Change server'**
+  String get serverSettingsChangeAddressButton;
+
+  /// No description provided for @logoutConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out?'**
+  String get logoutConfirmTitle;
+
+  /// No description provided for @logoutConfirmBodyUnsynced.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {1 change has} other {{count} changes have}} not been sent to the server yet and will be lost.'**
+  String logoutConfirmBodyUnsynced(int count);
+
+  /// No description provided for @logoutConfirmBodyClean.
+  ///
+  /// In en, this message translates to:
+  /// **'You can log back in at any time.'**
+  String get logoutConfirmBodyClean;
 }
 
 class _AppLocalizationsDelegate

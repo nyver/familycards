@@ -8,6 +8,7 @@ openspec/
 .agent/
 .agents/
 .gigacode/
+.antigravitycli/
 
 # Local configuration and runtime data
 config.yaml

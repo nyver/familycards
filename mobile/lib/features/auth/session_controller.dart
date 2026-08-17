@@ -9,6 +9,7 @@ import '../../core/crypto/argon2.dart';
 import '../../core/crypto/envelope.dart';
 import '../../core/crypto/invite_code.dart';
 import '../../core/crypto/recovery_phrase.dart';
+import '../../core/crypto/secure_vault_key_store.dart';
 import '../../core/crypto/vault_key.dart';
 import '../../core/db/database.dart';
 import '../../core/net/api_client.dart';
@@ -51,7 +52,11 @@ class SessionController extends StateNotifier<AuthState> {
     VaultKeyHolder? vaultKeyHolder,
     KeyValueStore? keyValueStore,
   }) : identityStore = identityStore ?? IdentityStore(storage: keyValueStore),
-       vaultKeyHolder = vaultKeyHolder ?? VaultKeyHolder(),
+       vaultKeyHolder =
+           vaultKeyHolder ??
+           VaultKeyHolder(
+             secureStore: SecureVaultKeyStore(storage: keyValueStore),
+           ),
        super(const AuthLoading()) {
     tokenStore = SecureTokenStore(
       storage: keyValueStore,
@@ -427,6 +432,43 @@ class SessionController extends StateNotifier<AuthState> {
     }
   }
 
+  /// Unlocks using a key previously persisted for biometric unlock. The
+  /// caller must have already shown the platform biometric prompt (see
+  /// core/biometrics/biometric_authenticator.dart) - this only applies
+  /// the key if one was found, it does not itself authenticate the user.
+  Future<Result<void>> unlockWithBiometrics() async {
+    final identityState = state;
+    if (identityState is! AuthNeedsUnlock) {
+      return Result.err(AppError.unknown('No identity pending unlock'));
+    }
+    final applied = await vaultKeyHolder.unlockFromPersisted();
+    if (!applied) {
+      return Result.err(AppError.crypto('No biometric key available'));
+    }
+    state = AuthReady(identityState.identity);
+    return const Result.ok(null);
+  }
+
+  /// Call when the app is backgrounded, to start the auto-lock timeout.
+  void enterBackground() {
+    vaultKeyHolder.enterBackground();
+  }
+
+  /// Call when the app returns to the foreground. If the background lock
+  /// timeout elapsed, the vault key was wiped from memory - route back to
+  /// the unlock screen so the user must re-authenticate before any card
+  /// can be decrypted again.
+  void enterForeground() {
+    final wasUnlocked = vaultKeyHolder.isUnlocked;
+    vaultKeyHolder.enterForeground();
+    final currentState = state;
+    if (wasUnlocked &&
+        !vaultKeyHolder.isUnlocked &&
+        currentState is AuthReady) {
+      state = AuthNeedsUnlock(currentState.identity);
+    }
+  }
+
   /// Wipes all local state (identity, tokens, vault key, and the local
   /// database) and returns to server selection - used when the user
   /// changes to a different server, which invalidates everything local.
@@ -437,11 +479,71 @@ class SessionController extends StateNotifier<AuthState> {
     }
     await identityStore.clearAll();
     await tokenStore.clear();
+    await vaultKeyHolder.clearPersisted();
     vaultKeyHolder.lock();
 
     final normalized = normalizeServerAddress(newAddress);
     apiClient.setBaseUrl(normalized);
     state = const AuthNeedsServer();
+  }
+
+  /// Signs out of the current account: best-effort revokes this device's
+  /// session on the server (a failure here, e.g. no network, must not
+  /// block sign-out - see "выход без сети"), then wipes local cards,
+  /// tokens, the vault key (including any biometric-persisted copy), and
+  /// the identity - but keeps the server address, so the user lands back
+  /// on onboarding for the same server rather than server selection.
+  Future<void> logout() async {
+    final address =
+        await identityStore.getServerAddress() ?? apiClient.currentBaseUrl;
+    final refreshToken = await tokenStore.getRefreshToken();
+    if (refreshToken != null) {
+      await apiClient.logout(refreshToken);
+    }
+
+    for (final table in database.allTables) {
+      await database.delete(table).go();
+    }
+    await identityStore.clearIdentity();
+    await vaultKeyHolder.clearPersisted();
+    vaultKeyHolder.lock();
+    await tokenStore.clear();
+
+    state = AuthNeedsOnboarding(address);
+  }
+
+  /// The plaintext code for a freshly generated invite (shown once - see
+  /// client/settings spec, "Код показывается один раз") and its hash
+  /// (used to cancel it later, while still on screen).
+  Future<Result<({String code, String codeHash})>> createInvite({
+    required SecretKey vaultKey,
+    int ttlHours = 24,
+  }) async {
+    final code = InviteCode.generate();
+    final codeHash = await _sha256Hex(code);
+    final salt = _randomSalt();
+    final ikek = await deriveKeyEncryptionKey(
+      password: code,
+      salt: salt,
+      params: Argon2Params.defaults,
+    );
+    final wrap = await wrapVaultKeyWithInviteKey(
+      vaultKey: vaultKey,
+      inviteKeyEncryptionKey: ikek,
+    );
+
+    final result = await apiClient.createInvite(
+      codeHash: codeHash,
+      wrappedVaultKey: _b64(wrap.ciphertext),
+      wrapNonce: _b64(wrap.nonce),
+      kdfSalt: _b64(salt),
+      kdfParams: Argon2Params.defaults.toJson(),
+      ttlHours: ttlHours,
+    );
+    return result.fold(
+      (_) => Result.ok((code: code, codeHash: codeHash)),
+      (error) => Result.err(error),
+    );
   }
 
   Future<void> _completeSession({

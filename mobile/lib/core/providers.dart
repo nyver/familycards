@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/store_catalog.dart';
 import '../features/auth/auth_providers.dart';
 import '../features/cards/card_repository.dart';
+import '../features/settings/security_settings_store.dart';
+import 'biometrics/biometric_authenticator.dart';
 import 'db/daos/cards_dao.dart';
 import 'db/daos/local_blobs_dao.dart';
 import 'db/database.dart';
@@ -47,3 +49,11 @@ final vaultKeyProvider = Provider<SecretKey?>((ref) {
   ref.watch(sessionControllerProvider);
   return ref.watch(sessionControllerProvider.notifier).vaultKeyHolder.keyOrNull;
 });
+
+final securitySettingsStoreProvider = Provider<SecuritySettingsStore>(
+  (ref) => SecuritySettingsStore(),
+);
+
+final biometricAuthenticatorProvider = Provider<BiometricAuthenticator>(
+  (ref) => LocalAuthBiometricAuthenticator(),
+);

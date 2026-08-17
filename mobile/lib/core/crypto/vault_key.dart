@@ -148,4 +148,24 @@ class VaultKeyHolder {
   Future<void> clearPersisted() async {
     await _secureStore?.clear();
   }
+
+  /// Whether a secure store was configured at all - i.e. whether
+  /// biometric unlock is a meaningful option on this holder (a fresh
+  /// holder with no store, as used by tests that don't exercise
+  /// biometrics, always reports false).
+  bool get hasSecureStore => _secureStore != null;
+
+  /// Unlocks using a previously persisted key, if one exists (the
+  /// biometric unlock path). The caller is responsible for the actual
+  /// biometric prompt *before* calling this - this method only reads the
+  /// already-encrypted-at-rest bytes and does not itself gate access on
+  /// anything. Returns whether a persisted key was found and applied.
+  Future<bool> unlockFromPersisted() async {
+    final store = _secureStore;
+    if (store == null) return false;
+    final bytes = await store.load();
+    if (bytes == null) return false;
+    unlock(SecretKey(bytes));
+    return true;
+  }
 }

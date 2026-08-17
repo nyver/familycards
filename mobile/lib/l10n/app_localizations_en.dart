@@ -311,4 +311,208 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonRetry => 'Retry';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsMembersTile => 'Family members';
+
+  @override
+  String get settingsSecurityTile => 'Security';
+
+  @override
+  String get settingsTrashTile => 'Trash';
+
+  @override
+  String get settingsExportTile => 'Export data';
+
+  @override
+  String get settingsServerTile => 'Server';
+
+  @override
+  String get settingsLogoutTile => 'Log out';
+
+  @override
+  String get membersTitle => 'Family members';
+
+  @override
+  String get membersNoNetwork =>
+      'Connect to the internet to see the member list.';
+
+  @override
+  String get membersRevokeButton => 'Revoke access';
+
+  @override
+  String get membersRevokeConfirmTitle => 'Revoke access?';
+
+  @override
+  String membersRevokeConfirmBody(String name) {
+    return '$name will lose access to the family vault on all of their devices.';
+  }
+
+  @override
+  String get membersRevokedLabel => 'revoked';
+
+  @override
+  String membersDeviceCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count devices',
+      one: '1 device',
+      zero: 'No devices',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inviteTitle => 'Invite a member';
+
+  @override
+  String get inviteGenerateButton => 'Generate invite code';
+
+  @override
+  String inviteExpiresAt(String date) {
+    return 'Expires: $date';
+  }
+
+  @override
+  String get inviteShareButton => 'Share';
+
+  @override
+  String get inviteCancelButton => 'Cancel invite';
+
+  @override
+  String get inviteCancelConfirm => 'This invite code will no longer work.';
+
+  @override
+  String get inviteCancelledMessage => 'This invite has been cancelled.';
+
+  @override
+  String get inviteLimitReached =>
+      'The family vault is full - remove a member or wait for a pending invite to expire.';
+
+  @override
+  String get securityBiometricTitle => 'Security';
+
+  @override
+  String get securityBiometricToggle => 'Unlock with biometrics';
+
+  @override
+  String get securityBiometricUnavailable =>
+      'Biometric unlock is not available on this device.';
+
+  @override
+  String get securityBiometricConfirmReason =>
+      'Confirm to enable biometric unlock';
+
+  @override
+  String get securityAutoLockNotice =>
+      'The app always locks itself automatically after 5 minutes in the background.';
+
+  @override
+  String get unlockBiometricButton => 'Unlock with biometrics';
+
+  @override
+  String get trashTitle => 'Trash';
+
+  @override
+  String get trashEmpty => 'Trash is empty.';
+
+  @override
+  String get trashRestoreButton => 'Restore';
+
+  @override
+  String get trashDeleteForeverButton => 'Delete forever';
+
+  @override
+  String get trashDeleteForeverConfirmTitle => 'Delete forever?';
+
+  @override
+  String get trashDeleteForeverConfirmBody =>
+      'This card cannot be recovered after this.';
+
+  @override
+  String trashDaysRemaining(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days left',
+      one: '1 day left',
+      zero: 'Removed today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportTitle => 'Export data';
+
+  @override
+  String get exportPasswordLabel => 'Archive password';
+
+  @override
+  String get exportPasswordConfirmLabel => 'Confirm password';
+
+  @override
+  String get exportWarning =>
+      'The archive will contain every card number in this vault. Keep the file and its password safe.';
+
+  @override
+  String get exportButton => 'Export';
+
+  @override
+  String get exportPasswordMismatch => 'Passwords don\'t match';
+
+  @override
+  String get exportSuccessTitle => 'Export complete';
+
+  @override
+  String exportSuccessBody(String path) {
+    return 'Saved to $path';
+  }
+
+  @override
+  String get exportShareButton => 'Share file';
+
+  @override
+  String get serverSettingsTitle => 'Server';
+
+  @override
+  String get serverSettingsAddressLabel => 'Server address';
+
+  @override
+  String get serverSettingsReachable => 'Reachable';
+
+  @override
+  String get serverSettingsUnreachable => 'Unreachable';
+
+  @override
+  String get serverSettingsLastSync => 'Last successful sync';
+
+  @override
+  String get serverSettingsPendingCount => 'Unsynced changes';
+
+  @override
+  String get serverSettingsForceSyncButton => 'Sync now';
+
+  @override
+  String get serverSettingsChangeAddressButton => 'Change server';
+
+  @override
+  String get logoutConfirmTitle => 'Log out?';
+
+  @override
+  String logoutConfirmBodyUnsynced(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes have',
+      one: '1 change has',
+    );
+    return '$_temp0 not been sent to the server yet and will be lost.';
+  }
+
+  @override
+  String get logoutConfirmBodyClean => 'You can log back in at any time.';
 }

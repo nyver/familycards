@@ -171,5 +171,37 @@ void main() {
         expect(store.saved, isNull);
       },
     );
+
+    test('unlockFromPersisted applies a previously saved key', () async {
+      final store = _FakeSecureStore();
+      final writer = VaultKeyHolder(secureStore: store);
+      final vk = await generateVaultKey();
+      writer.unlock(vk);
+      await writer.persistIfBiometricEnabled();
+
+      final reader = VaultKeyHolder(secureStore: store);
+      expect(reader.isUnlocked, isFalse);
+      final applied = await reader.unlockFromPersisted();
+
+      expect(applied, isTrue);
+      expect(reader.isUnlocked, isTrue);
+      expect(
+        await reader.keyOrNull!.extractBytes(),
+        equals(await vk.extractBytes()),
+      );
+    });
+
+    test('unlockFromPersisted reports false when nothing was saved', () async {
+      final holder = VaultKeyHolder(secureStore: _FakeSecureStore());
+      final applied = await holder.unlockFromPersisted();
+      expect(applied, isFalse);
+      expect(holder.isUnlocked, isFalse);
+    });
+
+    test('unlockFromPersisted is a no-op without a configured store', () async {
+      final holder = VaultKeyHolder();
+      final applied = await holder.unlockFromPersisted();
+      expect(applied, isFalse);
+    });
   });
 }
