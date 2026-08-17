@@ -8,6 +8,7 @@ import '../settings/settings_screen.dart';
 import '../sync/sync_status_provider.dart';
 import 'card_detail_screen.dart';
 import 'card_editor_screen.dart';
+import 'generated_logo.dart';
 
 /// Main authenticated screen: a two-column grid of card tiles, favorites
 /// pinned in their own section above the rest, a search field, and a
@@ -275,14 +276,22 @@ class _CardTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (card.logoAsset != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(card.logoAsset!, width: 32, height: 32),
-                  ),
-                ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: card.logoAsset != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          card.logoAsset!,
+                          width: 32,
+                          height: 32,
+                        ),
+                      )
+                    : GeneratedLogo(
+                        storeName: card.storeName,
+                        foreground: textColor,
+                      ),
+              ),
               Text(
                 card.storeName,
                 maxLines: 2,
