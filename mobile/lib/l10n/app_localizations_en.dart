@@ -394,6 +394,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'The family vault is full - remove a member or wait for a pending invite to expire.';
 
   @override
+  String get inviteScanQrButton => 'Scan QR code';
+
+  @override
+  String get inviteScanQrTitle => 'Scan invite code';
+
+  @override
   String get securityBiometricTitle => 'Security';
 
   @override

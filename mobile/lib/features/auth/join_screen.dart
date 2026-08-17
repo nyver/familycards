@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import 'auth_providers.dart';
 import 'create_vault_screen.dart'
     show minPasswordLength, evaluatePasswordStrength, PasswordStrength;
+import 'invite_qr_scan_screen.dart';
 
 class JoinScreen extends ConsumerStatefulWidget {
   const JoinScreen({super.key});
@@ -83,6 +84,14 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
     );
   }
 
+  Future<void> _scanQr() async {
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const InviteQrScanScreen()),
+    );
+    if (result == null) return;
+    setState(() => _codeController.text = result);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -94,14 +103,27 @@ class _JoinScreenState extends ConsumerState<JoinScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextField(
-                controller: _codeController,
-                decoration: InputDecoration(
-                  labelText: l10n.inviteCodeLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                textCapitalization: TextCapitalization.characters,
-                onChanged: (_) => setState(() {}),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _codeController,
+                      decoration: InputDecoration(
+                        labelText: l10n.inviteCodeLabel,
+                        border: const OutlineInputBorder(),
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    tooltip: l10n.inviteScanQrButton,
+                    onPressed: _scanQr,
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               TextField(

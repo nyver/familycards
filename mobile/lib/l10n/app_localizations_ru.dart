@@ -398,6 +398,12 @@ class AppLocalizationsRu extends AppLocalizations {
       'Семейный сейф заполнен — удалите участника или дождитесь истечения ожидающего приглашения.';
 
   @override
+  String get inviteScanQrButton => 'Сканировать QR-код';
+
+  @override
+  String get inviteScanQrTitle => 'Сканирование кода приглашения';
+
+  @override
   String get securityBiometricTitle => 'Безопасность';
 
   @override

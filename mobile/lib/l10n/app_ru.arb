@@ -131,6 +131,8 @@
   "inviteCancelConfirm": "Этот код приглашения перестанет работать.",
   "inviteCancelledMessage": "Это приглашение отменено.",
   "inviteLimitReached": "Семейный сейф заполнен — удалите участника или дождитесь истечения ожидающего приглашения.",
+  "inviteScanQrButton": "Сканировать QR-код",
+  "inviteScanQrTitle": "Сканирование кода приглашения",
 
   "securityBiometricTitle": "Безопасность",
   "securityBiometricToggle": "Разблокировка биометрией",

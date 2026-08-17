@@ -770,6 +770,18 @@ abstract class AppLocalizations {
   /// **'The family vault is full - remove a member or wait for a pending invite to expire.'**
   String get inviteLimitReached;
 
+  /// No description provided for @inviteScanQrButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code'**
+  String get inviteScanQrButton;
+
+  /// No description provided for @inviteScanQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan invite code'**
+  String get inviteScanQrTitle;
+
   /// No description provided for @securityBiometricTitle.
   ///
   /// In en, this message translates to:

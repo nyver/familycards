@@ -261,6 +261,10 @@
   "@inviteCancelledMessage": {},
   "inviteLimitReached": "The family vault is full - remove a member or wait for a pending invite to expire.",
   "@inviteLimitReached": {},
+  "inviteScanQrButton": "Scan QR code",
+  "@inviteScanQrButton": {},
+  "inviteScanQrTitle": "Scan invite code",
+  "@inviteScanQrTitle": {},
 
   "securityBiometricTitle": "Security",
   "@securityBiometricTitle": {},
