@@ -2,7 +2,7 @@
     <!-- Biometric vault unlock, see features/settings/security_screen.dart -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <application
-        android:label="mobile"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

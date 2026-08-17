@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown as the launcher icon's label - kept in sync with
+         lib/l10n/app_en.arb's appTitle. -->
+    <string name="app_name">Family Card Wallet</string>
+</resources>
