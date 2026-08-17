@@ -100,15 +100,17 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen>
       stream: dao.watchVisibleCards(),
       builder: (context, snapshot) {
         final cards = snapshot.data;
-        if (cards == null)
+        if (cards == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
+        }
         final index = cards.indexWhere((c) => c.id == widget.cardId);
         if (index == -1) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && Navigator.canPop(context))
+            if (mounted && Navigator.canPop(context)) {
               Navigator.of(context).pop();
+            }
           });
           return const Scaffold(body: SizedBox.shrink());
         }

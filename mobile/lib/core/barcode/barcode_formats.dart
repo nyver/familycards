@@ -142,8 +142,9 @@ BarcodeValidation _validateUpcE(String number) {
     return const BarcodeValidation.invalid('expected 8 digits');
   }
   final expanded = _expandUpcEToUpcA(number);
-  if (expanded == null)
+  if (expanded == null) {
     return const BarcodeValidation.invalid('cannot expand to UPC-A');
+  }
   return _validateDigitsWithChecksum(
     expanded,
     length: 12,

@@ -10,9 +10,11 @@ class DeviceIdentity {
 }
 
 DeviceIdentity currentDeviceIdentity() {
-  if (Platform.isAndroid)
+  if (Platform.isAndroid) {
     return const DeviceIdentity(name: 'Android Device', platform: 'android');
-  if (Platform.isIOS)
+  }
+  if (Platform.isIOS) {
     return const DeviceIdentity(name: 'iPhone', platform: 'ios');
+  }
   return const DeviceIdentity(name: 'Unknown Device', platform: 'other');
 }
