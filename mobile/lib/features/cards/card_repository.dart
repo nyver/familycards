@@ -119,13 +119,9 @@ class CardRepository {
     );
   }
 
-  Future<void> reorder(String id, int sortOrder) async {
-    await dao.updateSortOrder(
-      id,
-      sortOrder,
-      DateTime.now().millisecondsSinceEpoch,
-    );
-  }
+  /// Records that the card's detail screen was opened, for the "most
+  /// used first" sort order.
+  Future<void> recordUsage(String id) => dao.incrementUseCount(id);
 
   Future<void> softDelete(String id) async {
     final now = DateTime.now().millisecondsSinceEpoch;

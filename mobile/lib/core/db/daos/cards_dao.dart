@@ -10,13 +10,14 @@ class CardsDao extends DatabaseAccessor<AppDatabase> with _$CardsDaoMixin {
   CardsDao(super.db);
 
   /// Live, non-deleted cards ordered for the main list: favorites first,
-  /// then manual sort order.
+  /// then most-used first within each group, then creation order for
+  /// cards tied on use count (including cards never opened yet).
   Stream<List<Card>> watchVisibleCards() {
     final query = select(cards)
       ..where((c) => c.deleted.equals(false))
       ..orderBy([
         (c) => OrderingTerm.desc(c.favorite),
-        (c) => OrderingTerm.asc(c.sortOrder),
+        (c) => OrderingTerm.desc(c.useCount),
         (c) => OrderingTerm.asc(c.createdAt),
       ]);
     return query.watch();
@@ -128,16 +129,16 @@ class CardsDao extends DatabaseAccessor<AppDatabase> with _$CardsDaoMixin {
     return into(cards).insertOnConflictUpdate(remote);
   }
 
-  /// sort_order is part of the encrypted payload (see canonical JSON in
-  /// the crypto layer), so changing it marks the card dirty like any other
-  /// edit.
-  Future<void> updateSortOrder(String id, int sortOrder, int updatedAtMillis) {
-    return (update(cards)..where((c) => c.id.equals(id))).write(
-      CardsCompanion(
-        sortOrder: Value(sortOrder),
-        updatedAt: Value(updatedAtMillis),
-        dirty: const Value(true),
-      ),
+  /// Records a "use" of a card - opening its detail screen to show the
+  /// barcode. Local-only bookkeeping: deliberately does not touch
+  /// `updatedAt`/`dirty`, so it never triggers a sync push and never
+  /// becomes part of the encrypted payload (see tables.dart's doc comment
+  /// on `useCount`).
+  Future<void> incrementUseCount(String id) async {
+    final row = await getCard(id);
+    if (row == null) return;
+    await (update(cards)..where((c) => c.id.equals(id))).write(
+      CardsCompanion(useCount: Value(row.useCount + 1)),
     );
   }
 }

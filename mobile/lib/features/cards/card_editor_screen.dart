@@ -53,6 +53,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   late List<CustomField> _customFields;
   String? _frontBlob;
   String? _backBlob;
+  String? _logoAsset;
   bool _saving = false;
 
   late final String _initialSnapshot;
@@ -78,6 +79,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         : _decodeCustomFields(existing.customFields);
     _frontBlob = existing?.frontBlobId;
     _backBlob = existing?.backBlobId;
+    _logoAsset = existing?.logoAsset;
     _initialSnapshot = _snapshot();
   }
 
@@ -223,7 +225,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       customFields: _customFields.where((f) => f.k.trim().isNotEmpty).toList(),
       favorite: widget.existing?.favorite ?? false,
       frontBlob: _frontBlob,
-      logoAsset: widget.existing?.logoAsset,
+      logoAsset: _logoAsset,
       note: _noteController.text.trim(),
       secondaryNumber: _secondaryNumberController.text.trim().isEmpty
           ? null
@@ -386,6 +388,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     setState(() {
       _storeNameController.text = entry.displayName;
       _color = entry.color.toARGB32();
+      _logoAsset = entry.logoAsset;
       if (_cardNumberController.text.trim().isEmpty) {
         _format = entry.format;
       }

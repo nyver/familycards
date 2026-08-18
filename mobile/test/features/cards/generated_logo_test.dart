@@ -33,7 +33,10 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Material(
-          child: GeneratedLogo(storeName: 'Corner Shop', foreground: Colors.black),
+          child: GeneratedLogo(
+            storeName: 'Corner Shop',
+            foreground: Colors.black,
+          ),
         ),
       ),
     );

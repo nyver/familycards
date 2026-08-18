@@ -48,6 +48,12 @@ dev_dependencies:
   screen_brightness_platform_interface: ^2.1.2
   wakelock_plus_platform_interface: ^1.6.0
   plugin_platform_interface: ^2.1.8
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
 
 flutter:
   uses-material-design: true

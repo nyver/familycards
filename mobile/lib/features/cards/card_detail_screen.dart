@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/barcode/barcode_formats.dart';
 import '../../core/crypto/canonical_json.dart';
+import '../../core/db/daos/cards_dao.dart';
 import '../../core/db/database.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
@@ -41,6 +42,9 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen>
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
     _raiseBrightness();
+    // Counts as "using" this card, once per screen open - not per swipe
+    // to a neighbor - see CardsDao.incrementUseCount.
+    ref.read(cardRepositoryProvider).recordUsage(widget.cardId);
   }
 
   @override
@@ -105,8 +109,7 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen>
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final index = cards.indexWhere((c) => c.id == widget.cardId);
-        if (index == -1) {
+        if (cards.indexWhere((c) => c.id == widget.cardId) == -1) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && Navigator.canPop(context)) {
               Navigator.of(context).pop();
@@ -114,15 +117,20 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen>
           });
           return const Scaffold(body: SizedBox.shrink());
         }
+        // The swipeable neighbor order is handed down as a plain list of
+        // ids; each pager below freezes it once (in initState) rather
+        // than re-reading it on every rebuild - see their doc comments
+        // for why that matters.
+        final orderedIds = cards.map((c) => c.id).toList(growable: false);
         return _fullscreen
-            ? _FullscreenView(
-                cards: cards,
-                initialIndex: index,
+            ? _FullscreenPager(
+                initialCardIds: orderedIds,
+                initialCardId: widget.cardId,
                 onExit: _exitFullscreen,
               )
-            : _NormalView(
-                cards: cards,
-                initialIndex: index,
+            : _NormalPager(
+                initialCardIds: orderedIds,
+                initialCardId: widget.cardId,
                 onEnterFullscreen: _enterFullscreen,
               );
       },
@@ -130,59 +138,125 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen>
   }
 }
 
-class _NormalView extends ConsumerWidget {
-  final List<Card> cards;
-  final int initialIndex;
+/// The non-fullscreen detail view: an AppBar (favorite/edit/delete, all
+/// acting on whichever card is currently on screen) over a swipeable
+/// [PageView].
+///
+/// Deliberately freezes [initialCardIds] once, in [initState], instead of
+/// tracking `CardsDao.watchVisibleCards()` live: that stream re-sorts
+/// favorites to the front, and `PageView`'s scroll *position* survives
+/// widget rebuilds even when a brand-new `PageController` is constructed
+/// each time (Flutter re-attaches the existing `ScrollPosition` to the
+/// new controller rather than recreating it, so `initialPage` only ever
+/// applies once). Without freezing the order, favoriting the very card
+/// being viewed would reorder the list out from under a fixed page
+/// index, silently swapping in whatever card now landed on that index -
+/// wrong store name, wrong number, wrong barcode format. Each page
+/// instead looks up its own card reactively by id via [CardsDao.watchCard],
+/// so edits still show up live without ever changing *which* card a given
+/// page shows.
+class _NormalPager extends ConsumerStatefulWidget {
+  final List<String> initialCardIds;
+  final String initialCardId;
   final VoidCallback onEnterFullscreen;
-  const _NormalView({
-    required this.cards,
-    required this.initialIndex,
+  const _NormalPager({
+    required this.initialCardIds,
+    required this.initialCardId,
     required this.onEnterFullscreen,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final card = cards[initialIndex];
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(card.storeName),
-        actions: [
-          IconButton(
-            icon: Icon(card.favorite ? Icons.star : Icons.star_border),
-            onPressed: () => ref
-                .read(cardRepositoryProvider)
-                .toggleFavorite(card.id, !card.favorite),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CardEditorScreen(existing: card),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _confirmDelete(context, ref, card),
-          ),
-        ],
-      ),
-      body: PageView.builder(
-        controller: PageController(initialPage: initialIndex),
-        itemCount: cards.length,
-        itemBuilder: (context, i) => _CardDetailBody(
-          card: cards[i],
-          onEnterFullscreen: onEnterFullscreen,
-        ),
-      ),
+  ConsumerState<_NormalPager> createState() => _NormalPagerState();
+}
+
+class _NormalPagerState extends ConsumerState<_NormalPager> {
+  late final List<String> _orderedIds = widget.initialCardIds;
+  late final PageController _pageController;
+  late String _currentCardId;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentCardId = widget.initialCardId;
+    final startIndex = _orderedIds.indexOf(widget.initialCardId);
+    _pageController = PageController(
+      initialPage: startIndex < 0 ? 0 : startIndex,
     );
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    Card card,
-  ) async {
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dao = ref.watch(cardsDaoProvider);
+    return StreamBuilder<Card?>(
+      stream: dao.watchCard(_currentCardId),
+      builder: (context, snapshot) {
+        final card = snapshot.data;
+        if (card == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return Scaffold(
+          appBar: AppBar(
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (card.logoAsset != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(card.logoAsset!, width: 28, height: 28),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Flexible(
+                  child: Text(card.storeName, overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(card.favorite ? Icons.star : Icons.star_border),
+                onPressed: () => ref
+                    .read(cardRepositoryProvider)
+                    .toggleFavorite(card.id, !card.favorite),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CardEditorScreen(existing: card),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _confirmDelete(context, card),
+              ),
+            ],
+          ),
+          body: PageView.builder(
+            controller: _pageController,
+            itemCount: _orderedIds.length,
+            onPageChanged: (i) =>
+                setState(() => _currentCardId = _orderedIds[i]),
+            itemBuilder: (context, i) => _CardDetailBody(
+              dao: dao,
+              cardId: _orderedIds[i],
+              onEnterFullscreen: widget.onEnterFullscreen,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Card card) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -208,30 +282,63 @@ class _NormalView extends ConsumerWidget {
   }
 }
 
-class _FullscreenView extends StatelessWidget {
-  final List<Card> cards;
-  final int initialIndex;
+/// The fullscreen barcode-only view. See [_NormalPager]'s doc comment for
+/// why the page order is frozen once rather than tracked live.
+class _FullscreenPager extends ConsumerStatefulWidget {
+  final List<String> initialCardIds;
+  final String initialCardId;
   final VoidCallback onExit;
-  const _FullscreenView({
-    required this.cards,
-    required this.initialIndex,
+  const _FullscreenPager({
+    required this.initialCardIds,
+    required this.initialCardId,
     required this.onExit,
   });
 
   @override
+  ConsumerState<_FullscreenPager> createState() => _FullscreenPagerState();
+}
+
+class _FullscreenPagerState extends ConsumerState<_FullscreenPager> {
+  late final List<String> _orderedIds = widget.initialCardIds;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    final startIndex = _orderedIds.indexOf(widget.initialCardId);
+    _pageController = PageController(
+      initialPage: startIndex < 0 ? 0 : startIndex,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final dao = ref.watch(cardsDaoProvider);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
             PageView.builder(
-              controller: PageController(initialPage: initialIndex),
-              itemCount: cards.length,
-              itemBuilder: (context, i) => _BarcodeArea(
-                card: cards[i],
-                heightFraction: 0.6,
-                textColor: Colors.white,
+              controller: _pageController,
+              itemCount: _orderedIds.length,
+              itemBuilder: (context, i) => StreamBuilder<Card?>(
+                stream: dao.watchCard(_orderedIds[i]),
+                builder: (context, snapshot) {
+                  final card = snapshot.data;
+                  if (card == null) return const SizedBox.shrink();
+                  return _BarcodeArea(
+                    card: card,
+                    heightFraction: 0.6,
+                    textColor: Colors.white,
+                  );
+                },
               ),
             ),
             Positioned(
@@ -239,7 +346,7 @@ class _FullscreenView extends StatelessWidget {
               right: 8,
               child: IconButton(
                 icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
-                onPressed: onExit,
+                onPressed: widget.onExit,
               ),
             ),
           ],
@@ -249,50 +356,62 @@ class _FullscreenView extends StatelessWidget {
   }
 }
 
-class _CardDetailBody extends ConsumerWidget {
-  final Card card;
+class _CardDetailBody extends StatelessWidget {
+  final CardsDao dao;
+  final String cardId;
   final VoidCallback onEnterFullscreen;
-  const _CardDetailBody({required this.card, required this.onEnterFullscreen});
+  const _CardDetailBody({
+    required this.dao,
+    required this.cardId,
+    required this.onEnterFullscreen,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final customFields = _decodeCustomFields(card.customFields);
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        GestureDetector(
-          onTap: onEnterFullscreen,
-          child: _BarcodeArea(
-            card: card,
-            heightFraction: 0.3,
-            textColor: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (card.frontBlobId != null || card.backBlobId != null)
-          Row(
-            children: [
-              if (card.frontBlobId != null)
-                Expanded(child: _PhotoThumbnail(blobId: card.frontBlobId!)),
-              if (card.frontBlobId != null && card.backBlobId != null)
-                const SizedBox(width: 12),
-              if (card.backBlobId != null)
-                Expanded(child: _PhotoThumbnail(blobId: card.backBlobId!)),
-            ],
-          ),
-        if (card.note.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(card.note),
-        ],
-        if (customFields.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          for (final field in customFields)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text('${field.k}: ${field.v}'),
+  Widget build(BuildContext context) {
+    return StreamBuilder<Card?>(
+      stream: dao.watchCard(cardId),
+      builder: (context, snapshot) {
+        final card = snapshot.data;
+        if (card == null) return const SizedBox.shrink();
+        final customFields = _decodeCustomFields(card.customFields);
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            GestureDetector(
+              onTap: onEnterFullscreen,
+              child: _BarcodeArea(
+                card: card,
+                heightFraction: 0.3,
+                textColor: Colors.black,
+              ),
             ),
-        ],
-      ],
+            const SizedBox(height: 16),
+            if (card.frontBlobId != null || card.backBlobId != null)
+              Row(
+                children: [
+                  if (card.frontBlobId != null)
+                    Expanded(child: _PhotoThumbnail(blobId: card.frontBlobId!)),
+                  if (card.frontBlobId != null && card.backBlobId != null)
+                    const SizedBox(width: 12),
+                  if (card.backBlobId != null)
+                    Expanded(child: _PhotoThumbnail(blobId: card.backBlobId!)),
+                ],
+              ),
+            if (card.note.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(card.note),
+            ],
+            if (customFields.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              for (final field in customFields)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('${field.k}: ${field.v}'),
+                ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

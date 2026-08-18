@@ -138,4 +138,74 @@ void main() {
 
     await database.close();
   });
+
+  testWidgets(
+    'toggling favorite on the viewed card does not swap in a different '
+    "card's data",
+    (tester) async {
+      final repo = CardRepository(database.cardsDao);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final xId = await repo.createCard(
+        CardPayload(
+          barcodeFormat: CardBarcodeFormat.code128,
+          cardNumber: '111111',
+          color: 0xFF3949AB,
+          createdAt: now,
+          storeName: 'Store X',
+        ),
+      );
+      await repo.createCard(
+        CardPayload(
+          barcodeFormat: CardBarcodeFormat.code128,
+          cardNumber: '222222',
+          color: 0xFF3949AB,
+          createdAt: now + 1,
+          storeName: 'Store Y',
+        ),
+      );
+      final zId = await repo.createCard(
+        CardPayload(
+          barcodeFormat: CardBarcodeFormat.code128,
+          cardNumber: '333333',
+          color: 0xFF3949AB,
+          createdAt: now + 2,
+          storeName: 'Store Z',
+        ),
+      );
+      // X starts favorite, so the visible order is [X, Y, Z] and Z (not
+      // yet favorite) sits at page index 2.
+      await repo.toggleFavorite(xId, true);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [databaseProvider.overrideWithValue(database)],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardDetailScreen(cardId: zId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Store Z'), findsOneWidget);
+      expect(find.text('3333 33'), findsOneWidget);
+
+      // Favoriting Z moves it ahead of Y in the sort order (favorites
+      // first) - a real reorder of the card the user is actively viewing.
+      await tester.tap(find.byIcon(Icons.star_border));
+      await tester.pumpAndSettle();
+
+      // Regression: before the fix, the PageView's scroll position stayed
+      // fixed at index 2 while the list reordered underneath it, so index
+      // 2 now pointed at Y - the screen silently showed Y's card number
+      // under Z's own (correctly updated) AppBar title.
+      expect(find.text('Store Z'), findsOneWidget);
+      expect(find.text('3333 33'), findsOneWidget);
+      expect(find.text('Store Y'), findsNothing);
+      expect(find.text('2222 22'), findsNothing);
+
+      await database.close();
+    },
+  );
 }

@@ -15,6 +15,10 @@
 # in the app's server address in that case - the port is only implicit
 # for the standard 443.
 
+{
+	email fake@mail.com
+}
+
 wallet.example.com {
 	reverse_proxy 127.0.0.1:8443 {
 		header_up X-Forwarded-Proto https

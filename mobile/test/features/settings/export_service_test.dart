@@ -20,6 +20,7 @@ Card _card(String id, String name, String number) {
     customFields: '[]',
     favorite: false,
     sortOrder: 0,
+    useCount: 0,
     createdAt: 1000,
     updatedAt: 1000,
     deleted: false,

@@ -124,13 +124,10 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
                         ),
-                        _CardGrid(cards: favorites, reorderable: false),
+                        _CardGrid(cards: favorites),
                         const SizedBox(height: 16),
                       ],
-                      _CardGrid(
-                        cards: others,
-                        reorderable: _query.trim().isEmpty,
-                      ),
+                      _CardGrid(cards: others),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -179,82 +176,34 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// A grid of card tiles. When [reorderable] is true (only offered for the
-/// unfiltered, non-favorite section - reordering a filtered or pinned view
-/// would silently corrupt sort order relative to hidden items), dragging a
-/// tile persists its new position via [CardRepository.reorder].
-class _CardGrid extends ConsumerWidget {
+/// A grid of card tiles, ordered by whatever [cards] is already sorted as
+/// (see [CardsDao.watchVisibleCards]: favorites, then most-used first).
+class _CardGrid extends StatelessWidget {
   final List<Card> cards;
-  final bool reorderable;
-  const _CardGrid({required this.cards, required this.reorderable});
+  const _CardGrid({required this.cards});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     if (cards.isEmpty) return const SizedBox.shrink();
-    final crossAxisCount = 2;
-
-    if (!reorderable) {
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.4,
-        ),
-        itemCount: cards.length,
-        itemBuilder: (context, i) => _CardTile(card: cards[i]),
-      );
-    }
-
-    return GridView(
+    return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         childAspectRatio: 1.4,
       ),
-      children: [
-        for (var i = 0; i < cards.length; i++)
-          LongPressDraggable<int>(
-            key: ValueKey(cards[i].id),
-            data: i,
-            feedback: Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: 160,
-                height: 110,
-                child: _CardTile(card: cards[i]),
-              ),
-            ),
-            childWhenDragging: Opacity(
-              opacity: 0.3,
-              child: _CardTile(card: cards[i]),
-            ),
-            child: DragTarget<int>(
-              onAcceptWithDetails: (details) {
-                final fromIndex = details.data;
-                if (fromIndex == i) return;
-                ref
-                    .read(cardRepositoryProvider)
-                    .reorder(cards[fromIndex].id, i);
-              },
-              builder: (context, candidateData, rejectedData) =>
-                  _CardTile(card: cards[i]),
-            ),
-          ),
-      ],
+      itemCount: cards.length,
+      itemBuilder: (context, i) =>
+          _CardTile(key: ValueKey(cards[i].id), card: cards[i]),
     );
   }
 }
 
 class _CardTile extends StatelessWidget {
   final Card card;
-  const _CardTile({required this.card});
+  const _CardTile({super.key, required this.card});
 
   @override
   Widget build(BuildContext context) {

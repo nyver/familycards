@@ -18,7 +18,16 @@ class Cards extends Table {
   TextColumn get customFields =>
       text().withDefault(const Constant('[]'))(); // JSON array of {k,v}
   BoolColumn get favorite => boolean().withDefault(const Constant(false))();
+  // Part of the fixed wire payload schema (see CardPayload) but no longer
+  // driven by any UI - the list now sorts by useCount instead of manual
+  // drag order. Preserved as-is for protocol compatibility.
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  // How many times this card's detail screen has been opened - local-only
+  // usage bookkeeping, drives the list's sort order. Deliberately absent
+  // from CardPayload/the encrypted sync payload: it is per-device
+  // behavior, not shared content, and must never trigger a sync push
+  // (see CardsDao.incrementUseCount).
+  IntColumn get useCount => integer().withDefault(const Constant(0))();
   IntColumn get createdAt => integer()(); // unix ms
   IntColumn get updatedAt => integer()(); // unix ms
   BoolColumn get deleted => boolean().withDefault(const Constant(false))();

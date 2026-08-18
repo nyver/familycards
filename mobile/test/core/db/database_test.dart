@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/db/database.dart';
@@ -94,6 +95,82 @@ void main() {
       reason: 'updating the cursor must not reset lastSyncAt',
     );
   });
+
+  test(
+    'visible cards sort favorites first, then most-used within each group',
+    () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      Future<void> insert(String id, {required bool favorite, int at = 0}) {
+        return db.cardsDao.insertNewCard(
+          CardsCompanion.insert(
+            id: id,
+            storeName: id,
+            cardNumber: '123456',
+            barcodeFormat: 'code128',
+            color: 0xFF112233,
+            createdAt: now + at,
+            updatedAt: now + at,
+            favorite: Value(favorite),
+          ),
+        );
+      }
+
+      // Insertion order deliberately does not match the expected sort
+      // order, so the test cannot pass by accident from insertion order
+      // alone.
+      await insert('fav-low-use', favorite: true, at: 0);
+      await insert('plain-low-use', favorite: false, at: 1);
+      await insert('fav-high-use', favorite: true, at: 2);
+      await insert('plain-high-use', favorite: false, at: 3);
+
+      // 3 uses each for the "high-use" cards, 1 each for "low-use".
+      for (var i = 0; i < 3; i++) {
+        await db.cardsDao.incrementUseCount('fav-high-use');
+        await db.cardsDao.incrementUseCount('plain-high-use');
+      }
+      await db.cardsDao.incrementUseCount('fav-low-use');
+      await db.cardsDao.incrementUseCount('plain-low-use');
+
+      final visible = await db.cardsDao.watchVisibleCards().first;
+      expect(visible.map((c) => c.id), [
+        'fav-high-use',
+        'fav-low-use',
+        'plain-high-use',
+        'plain-low-use',
+      ]);
+    },
+  );
+
+  test(
+    'incrementUseCount does not mark the card dirty or bump updatedAt',
+    () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.cardsDao.insertNewCard(
+        CardsCompanion.insert(
+          id: 'card-3',
+          storeName: 'Lenta',
+          cardNumber: '1234567890128',
+          barcodeFormat: 'ean13',
+          color: 0xFF0056A3,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await db.cardsDao.markSynced('card-3', 1); // simulate a synced card
+
+      await db.cardsDao.incrementUseCount('card-3');
+      await db.cardsDao.incrementUseCount('card-3');
+
+      final card = await db.cardsDao.getCard('card-3');
+      expect(card!.useCount, 2);
+      expect(
+        card.dirty,
+        isFalse,
+        reason: 'usage tracking must never trigger a sync push',
+      );
+      expect(card.updatedAt, now);
+    },
+  );
 
   test('local blob metadata round-trips and tracks upload state', () async {
     await db.localBlobsDao.recordBlob(

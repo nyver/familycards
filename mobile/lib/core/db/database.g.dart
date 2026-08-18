@@ -152,6 +152,18 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _useCountMeta = const VerificationMeta(
+    'useCount',
+  );
+  @override
+  late final GeneratedColumn<int> useCount = GeneratedColumn<int>(
+    'use_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -240,6 +252,7 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
     customFields,
     favorite,
     sortOrder,
+    useCount,
     createdAt,
     updatedAt,
     deleted,
@@ -359,6 +372,12 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('use_count')) {
+      context.handle(
+        _useCountMeta,
+        useCount.isAcceptableOrUnknown(data['use_count']!, _useCountMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -460,6 +479,10 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      useCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}use_count'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -507,6 +530,7 @@ class Card extends DataClass implements Insertable<Card> {
   final String customFields;
   final bool favorite;
   final int sortOrder;
+  final int useCount;
   final int createdAt;
   final int updatedAt;
   final bool deleted;
@@ -527,6 +551,7 @@ class Card extends DataClass implements Insertable<Card> {
     required this.customFields,
     required this.favorite,
     required this.sortOrder,
+    required this.useCount,
     required this.createdAt,
     required this.updatedAt,
     required this.deleted,
@@ -558,6 +583,7 @@ class Card extends DataClass implements Insertable<Card> {
     map['custom_fields'] = Variable<String>(customFields);
     map['favorite'] = Variable<bool>(favorite);
     map['sort_order'] = Variable<int>(sortOrder);
+    map['use_count'] = Variable<int>(useCount);
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     map['deleted'] = Variable<bool>(deleted);
@@ -592,6 +618,7 @@ class Card extends DataClass implements Insertable<Card> {
       customFields: Value(customFields),
       favorite: Value(favorite),
       sortOrder: Value(sortOrder),
+      useCount: Value(useCount),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deleted: Value(deleted),
@@ -622,6 +649,7 @@ class Card extends DataClass implements Insertable<Card> {
       customFields: serializer.fromJson<String>(json['customFields']),
       favorite: serializer.fromJson<bool>(json['favorite']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      useCount: serializer.fromJson<int>(json['useCount']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       deleted: serializer.fromJson<bool>(json['deleted']),
@@ -647,6 +675,7 @@ class Card extends DataClass implements Insertable<Card> {
       'customFields': serializer.toJson<String>(customFields),
       'favorite': serializer.toJson<bool>(favorite),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'useCount': serializer.toJson<int>(useCount),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'deleted': serializer.toJson<bool>(deleted),
@@ -670,6 +699,7 @@ class Card extends DataClass implements Insertable<Card> {
     String? customFields,
     bool? favorite,
     int? sortOrder,
+    int? useCount,
     int? createdAt,
     int? updatedAt,
     bool? deleted,
@@ -692,6 +722,7 @@ class Card extends DataClass implements Insertable<Card> {
     customFields: customFields ?? this.customFields,
     favorite: favorite ?? this.favorite,
     sortOrder: sortOrder ?? this.sortOrder,
+    useCount: useCount ?? this.useCount,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deleted: deleted ?? this.deleted,
@@ -726,6 +757,7 @@ class Card extends DataClass implements Insertable<Card> {
           : this.customFields,
       favorite: data.favorite.present ? data.favorite.value : this.favorite,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      useCount: data.useCount.present ? data.useCount.value : this.useCount,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deleted: data.deleted.present ? data.deleted.value : this.deleted,
@@ -751,6 +783,7 @@ class Card extends DataClass implements Insertable<Card> {
           ..write('customFields: $customFields, ')
           ..write('favorite: $favorite, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('useCount: $useCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deleted: $deleted, ')
@@ -776,6 +809,7 @@ class Card extends DataClass implements Insertable<Card> {
     customFields,
     favorite,
     sortOrder,
+    useCount,
     createdAt,
     updatedAt,
     deleted,
@@ -800,6 +834,7 @@ class Card extends DataClass implements Insertable<Card> {
           other.customFields == this.customFields &&
           other.favorite == this.favorite &&
           other.sortOrder == this.sortOrder &&
+          other.useCount == this.useCount &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deleted == this.deleted &&
@@ -822,6 +857,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
   final Value<String> customFields;
   final Value<bool> favorite;
   final Value<int> sortOrder;
+  final Value<int> useCount;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<bool> deleted;
@@ -843,6 +879,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
     this.customFields = const Value.absent(),
     this.favorite = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.useCount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deleted = const Value.absent(),
@@ -865,6 +902,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
     this.customFields = const Value.absent(),
     this.favorite = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.useCount = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.deleted = const Value.absent(),
@@ -893,6 +931,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
     Expression<String>? customFields,
     Expression<bool>? favorite,
     Expression<int>? sortOrder,
+    Expression<int>? useCount,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<bool>? deleted,
@@ -915,6 +954,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
       if (customFields != null) 'custom_fields': customFields,
       if (favorite != null) 'favorite': favorite,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (useCount != null) 'use_count': useCount,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deleted != null) 'deleted': deleted,
@@ -939,6 +979,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
     Value<String>? customFields,
     Value<bool>? favorite,
     Value<int>? sortOrder,
+    Value<int>? useCount,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<bool>? deleted,
@@ -961,6 +1002,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
       customFields: customFields ?? this.customFields,
       favorite: favorite ?? this.favorite,
       sortOrder: sortOrder ?? this.sortOrder,
+      useCount: useCount ?? this.useCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deleted: deleted ?? this.deleted,
@@ -1013,6 +1055,9 @@ class CardsCompanion extends UpdateCompanion<Card> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (useCount.present) {
+      map['use_count'] = Variable<int>(useCount.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -1053,6 +1098,7 @@ class CardsCompanion extends UpdateCompanion<Card> {
           ..write('customFields: $customFields, ')
           ..write('favorite: $favorite, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('useCount: $useCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deleted: $deleted, ')
@@ -1716,6 +1762,7 @@ typedef $$CardsTableCreateCompanionBuilder = CardsCompanion Function({
   Value<String> customFields,
   Value<bool> favorite,
   Value<int> sortOrder,
+  Value<int> useCount,
   required int createdAt,
   required int updatedAt,
   Value<bool> deleted,
@@ -1738,6 +1785,7 @@ typedef $$CardsTableUpdateCompanionBuilder = CardsCompanion Function({
   Value<String> customFields,
   Value<bool> favorite,
   Value<int> sortOrder,
+  Value<int> useCount,
   Value<int> createdAt,
   Value<int> updatedAt,
   Value<bool> deleted,
@@ -1817,6 +1865,11 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get useCount => $composableBuilder(
+    column: $table.useCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1925,6 +1978,11 @@ class $$CardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get useCount => $composableBuilder(
+    column: $table.useCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2016,6 +2074,9 @@ class $$CardsTableAnnotationComposer
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 
+  GeneratedColumn<int> get useCount =>
+      $composableBuilder(column: $table.useCount, builder: (column) => column);
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -2076,6 +2137,7 @@ class $$CardsTableTableManager
                 Value<String> customFields = const Value.absent(),
                 Value<bool> favorite = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<bool> deleted = const Value.absent(),
@@ -2097,6 +2159,7 @@ class $$CardsTableTableManager
                 customFields: customFields,
                 favorite: favorite,
                 sortOrder: sortOrder,
+                useCount: useCount,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deleted: deleted,
@@ -2120,6 +2183,7 @@ class $$CardsTableTableManager
                 Value<String> customFields = const Value.absent(),
                 Value<bool> favorite = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<int> useCount = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<bool> deleted = const Value.absent(),
@@ -2141,6 +2205,7 @@ class $$CardsTableTableManager
                 customFields: customFields,
                 favorite: favorite,
                 sortOrder: sortOrder,
+                useCount: useCount,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deleted: deleted,
