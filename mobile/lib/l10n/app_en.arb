@@ -219,6 +219,8 @@
   "@settingsTrashTile": {},
   "settingsExportTile": "Export data",
   "@settingsExportTile": {},
+  "settingsImportTile": "Import data",
+  "@settingsImportTile": {},
   "settingsServerTile": "Server",
   "@settingsServerTile": {},
   "settingsLogoutTile": "Log out",
@@ -316,6 +318,40 @@
   },
   "exportShareButton": "Share file",
   "@exportShareButton": {},
+
+  "importTitle": "Import data",
+  "@importTitle": {},
+  "importPickPrompt": "Choose a Family Card Wallet export file (.fcw) to import.",
+  "@importPickPrompt": {},
+  "importPickButton": "Choose file",
+  "@importPickButton": {},
+  "importPasswordLabel": "Archive password",
+  "@importPasswordLabel": {},
+  "importDecryptButton": "Continue",
+  "@importDecryptButton": {},
+  "importPickAnotherButton": "Choose a different file",
+  "@importPickAnotherButton": {},
+  "importWrongPassword": "Wrong password for this archive",
+  "@importWrongPassword": {},
+  "importInvalidFile": "This file isn't a Family Card Wallet export",
+  "@importInvalidFile": {},
+  "importCardsFound": "{count, plural, =0 {No cards found} one {1 card found} other {{count} cards found}}",
+  "@importCardsFound": {
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "importIncludeDuplicatesToggle": "Also import cards that duplicate existing ones",
+  "@importIncludeDuplicatesToggle": {},
+  "importConfirmButton": "Import",
+  "@importConfirmButton": {},
+  "importSuccessTitle": "Import complete",
+  "@importSuccessTitle": {},
+  "importSuccessBody": "{added, plural, =0 {No cards added} one {1 card added} other {{added} cards added}}, {skipped, plural, =0 {no duplicates skipped} one {1 duplicate skipped} other {{skipped} duplicates skipped}}",
+  "@importSuccessBody": {
+    "placeholders": {
+      "added": {"type": "int"},
+      "skipped": {"type": "int"}
+    }
+  },
 
   "serverSettingsTitle": "Server",
   "@serverSettingsTitle": {},

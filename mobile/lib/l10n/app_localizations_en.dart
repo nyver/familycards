@@ -328,6 +328,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsExportTile => 'Export data';
 
   @override
+  String get settingsImportTile => 'Import data';
+
+  @override
   String get settingsServerTile => 'Server';
 
   @override
@@ -480,6 +483,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportShareButton => 'Share file';
+
+  @override
+  String get importTitle => 'Import data';
+
+  @override
+  String get importPickPrompt =>
+      'Choose a Family Card Wallet export file (.fcw) to import.';
+
+  @override
+  String get importPickButton => 'Choose file';
+
+  @override
+  String get importPasswordLabel => 'Archive password';
+
+  @override
+  String get importDecryptButton => 'Continue';
+
+  @override
+  String get importPickAnotherButton => 'Choose a different file';
+
+  @override
+  String get importWrongPassword => 'Wrong password for this archive';
+
+  @override
+  String get importInvalidFile =>
+      'This file isn\'t a Family Card Wallet export';
+
+  @override
+  String importCardsFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards found',
+      one: '1 card found',
+      zero: 'No cards found',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importIncludeDuplicatesToggle =>
+      'Also import cards that duplicate existing ones';
+
+  @override
+  String get importConfirmButton => 'Import';
+
+  @override
+  String get importSuccessTitle => 'Import complete';
+
+  @override
+  String importSuccessBody(int added, int skipped) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added cards added',
+      one: '1 card added',
+      zero: 'No cards added',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skipped,
+      locale: localeName,
+      other: '$skipped duplicates skipped',
+      one: '1 duplicate skipped',
+      zero: 'no duplicates skipped',
+    );
+    return '$_temp0, $_temp1';
+  }
 
   @override
   String get serverSettingsTitle => 'Server';

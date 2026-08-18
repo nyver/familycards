@@ -5,6 +5,7 @@ import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../auth/auth_providers.dart';
 import 'export_screen.dart';
+import 'import_screen.dart';
 import 'members_screen.dart';
 import 'security_screen.dart';
 import 'server_settings_screen.dart';
@@ -47,6 +48,12 @@ class SettingsScreen extends ConsumerWidget {
             title: Text(l10n.settingsExportTile),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const ExportScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload_outlined),
+            title: Text(l10n.settingsImportTile),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const ImportScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.dns_outlined),

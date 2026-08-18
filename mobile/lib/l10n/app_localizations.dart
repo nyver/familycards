@@ -668,6 +668,12 @@ abstract class AppLocalizations {
   /// **'Export data'**
   String get settingsExportTile;
 
+  /// No description provided for @settingsImportTile.
+  ///
+  /// In en, this message translates to:
+  /// **'Import data'**
+  String get settingsImportTile;
+
   /// No description provided for @settingsServerTile.
   ///
   /// In en, this message translates to:
@@ -913,6 +919,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share file'**
   String get exportShareButton;
+
+  /// No description provided for @importTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import data'**
+  String get importTitle;
+
+  /// No description provided for @importPickPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a Family Card Wallet export file (.fcw) to import.'**
+  String get importPickPrompt;
+
+  /// No description provided for @importPickButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
+  String get importPickButton;
+
+  /// No description provided for @importPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive password'**
+  String get importPasswordLabel;
+
+  /// No description provided for @importDecryptButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get importDecryptButton;
+
+  /// No description provided for @importPickAnotherButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a different file'**
+  String get importPickAnotherButton;
+
+  /// No description provided for @importWrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong password for this archive'**
+  String get importWrongPassword;
+
+  /// No description provided for @importInvalidFile.
+  ///
+  /// In en, this message translates to:
+  /// **'This file isn\'t a Family Card Wallet export'**
+  String get importInvalidFile;
+
+  /// No description provided for @importCardsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0 {No cards found} one {1 card found} other {{count} cards found}}'**
+  String importCardsFound(int count);
+
+  /// No description provided for @importIncludeDuplicatesToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Also import cards that duplicate existing ones'**
+  String get importIncludeDuplicatesToggle;
+
+  /// No description provided for @importConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importConfirmButton;
+
+  /// No description provided for @importSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import complete'**
+  String get importSuccessTitle;
+
+  /// No description provided for @importSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{added, plural, =0 {No cards added} one {1 card added} other {{added} cards added}}, {skipped, plural, =0 {no duplicates skipped} one {1 duplicate skipped} other {{skipped} duplicates skipped}}'**
+  String importSuccessBody(int added, int skipped);
 
   /// No description provided for @serverSettingsTitle.
   ///

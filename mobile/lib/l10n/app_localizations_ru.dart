@@ -330,6 +330,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsExportTile => 'Экспорт данных';
 
   @override
+  String get settingsImportTile => 'Импорт данных';
+
+  @override
   String get settingsServerTile => 'Сервер';
 
   @override
@@ -486,6 +489,79 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get exportShareButton => 'Поделиться файлом';
+
+  @override
+  String get importTitle => 'Импорт данных';
+
+  @override
+  String get importPickPrompt =>
+      'Выберите файл экспорта Family Card Wallet (.fcw) для импорта.';
+
+  @override
+  String get importPickButton => 'Выбрать файл';
+
+  @override
+  String get importPasswordLabel => 'Пароль архива';
+
+  @override
+  String get importDecryptButton => 'Продолжить';
+
+  @override
+  String get importPickAnotherButton => 'Выбрать другой файл';
+
+  @override
+  String get importWrongPassword => 'Неверный пароль для этого архива';
+
+  @override
+  String get importInvalidFile =>
+      'Этот файл не является архивом экспорта Family Card Wallet';
+
+  @override
+  String importCardsFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Найдено $count карты',
+      many: 'Найдено $count карт',
+      few: 'Найдено $count карты',
+      one: 'Найдена 1 карта',
+      zero: 'Карты не найдены',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importIncludeDuplicatesToggle =>
+      'Также импортировать карты, дублирующие существующие';
+
+  @override
+  String get importConfirmButton => 'Импортировать';
+
+  @override
+  String get importSuccessTitle => 'Импорт завершён';
+
+  @override
+  String importSuccessBody(int added, int skipped) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: 'Добавлено $added карты',
+      many: 'Добавлено $added карт',
+      few: 'Добавлено $added карты',
+      one: 'Добавлена 1 карта',
+      zero: 'Карты не добавлены',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      skipped,
+      locale: localeName,
+      other: 'пропущено $skipped дубликата',
+      many: 'пропущено $skipped дубликатов',
+      few: 'пропущено $skipped дубликата',
+      one: 'пропущен 1 дубликат',
+      zero: 'дубликатов не пропущено',
+    );
+    return '$_temp0, $_temp1';
+  }
 
   @override
   String get serverSettingsTitle => 'Сервер';

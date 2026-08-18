@@ -38,6 +38,25 @@ class CardsDao extends DatabaseAccessor<AppDatabase> with _$CardsDaoMixin {
   Future<Card?> getCard(String id) =>
       (select(cards)..where((c) => c.id.equals(id))).getSingleOrNull();
 
+  /// True if a non-deleted card with this exact store name and card number
+  /// already exists - the duplicate key used by import (see
+  /// features/settings/import_service.dart) to decide whether an
+  /// incoming card is a duplicate of one already in the vault.
+  Future<bool> existsVisibleByStoreAndNumber(
+    String storeName,
+    String cardNumber,
+  ) async {
+    final query = select(cards)
+      ..where(
+        (c) =>
+            c.deleted.equals(false) &
+            c.storeName.equals(storeName) &
+            c.cardNumber.equals(cardNumber),
+      )
+      ..limit(1);
+    return (await query.getSingleOrNull()) != null;
+  }
+
   Stream<Card?> watchCard(String id) =>
       (select(cards)..where((c) => c.id.equals(id))).watchSingleOrNull();
 

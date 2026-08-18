@@ -4,7 +4,7 @@ A self-hosted, end-to-end encrypted loyalty card wallet for a family — a Stoca
 
 Screenshots: _placeholder — add screenshots of the card list, card detail (barcode), and onboarding once available._
 
-**Current status: server and mobile client both implemented and tested** through account/security settings (member management, invites, biometric unlock, trash, encrypted export, server diagnostics, sign-out). Remaining work is documentation polish and final release verification — see [Project status](#project-status).
+**Current status: server and mobile client both implemented and tested** through account/security settings (member management, invites, biometric unlock, trash, encrypted export/import, server diagnostics, sign-out). Remaining work is documentation polish and final release verification — see [Project status](#project-status).
 
 ## Key properties
 
@@ -18,7 +18,7 @@ Screenshots: _placeholder — add screenshots of the card list, card detail (bar
 | Component | Status |
 |---|---|
 | Sync server (`server/`) | **Done.** Auth, invites/membership, delta sync with conflict resolution, encrypted blob storage with garbage collection, admin backup. |
-| Mobile client (`mobile/`) | **Done.** Onboarding, client-side crypto, card CRUD with barcode scanning, the client sync engine, and account/security settings (members, invites, biometric unlock, trash, encrypted export, server diagnostics, sign-out). |
+| Mobile client (`mobile/`) | **Done.** Onboarding, client-side crypto, card CRUD with barcode scanning, the client sync engine, and account/security settings (members, invites, biometric unlock, trash, encrypted export/import, server diagnostics, sign-out). |
 | Documentation & release | In progress — this pass. |
 
 See [openspec/changes/add-family-card-wallet/tasks.md](openspec/changes/add-family-card-wallet/tasks.md) for the full task breakdown and [DECISIONS.md](DECISIONS.md) for implementation decisions and known environment limitations (no C compiler, so `go test -race` and `flutter test -race`-equivalent concurrency checks were not run; no Docker, so `docker compose up` was not exercised — the underlying binary and Dockerfile were verified separately, see DECISIONS.md).
@@ -110,7 +110,7 @@ mobile/            Flutter client
   lib/core/         db (drift), net (dio client), crypto, biometrics, storage
   lib/features/     auth (onboarding/session), cards (CRUD/scanner), sync
                      (client sync engine), settings (members/invites/security/
-                     trash/export/server diagnostics)
+                     trash/export/import/server diagnostics)
   test/             unit, widget, and server-backed integration tests
 deploy/            docker-compose.yml, wallet.service, Caddyfile
 docs/              API.md, SYNC.md, DEPLOY.md, THREAT-MODEL.md

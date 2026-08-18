@@ -112,6 +112,7 @@
   "settingsSecurityTile": "Безопасность",
   "settingsTrashTile": "Корзина",
   "settingsExportTile": "Экспорт данных",
+  "settingsImportTile": "Импорт данных",
   "settingsServerTile": "Сервер",
   "settingsLogoutTile": "Выйти",
 
@@ -158,6 +159,20 @@
   "exportSuccessTitle": "Экспорт завершён",
   "exportSuccessBody": "Сохранено в {path}",
   "exportShareButton": "Поделиться файлом",
+
+  "importTitle": "Импорт данных",
+  "importPickPrompt": "Выберите файл экспорта Family Card Wallet (.fcw) для импорта.",
+  "importPickButton": "Выбрать файл",
+  "importPasswordLabel": "Пароль архива",
+  "importDecryptButton": "Продолжить",
+  "importPickAnotherButton": "Выбрать другой файл",
+  "importWrongPassword": "Неверный пароль для этого архива",
+  "importInvalidFile": "Этот файл не является архивом экспорта Family Card Wallet",
+  "importCardsFound": "{count, plural, =0 {Карты не найдены} one {Найдена 1 карта} few {Найдено {count} карты} many {Найдено {count} карт} other {Найдено {count} карты}}",
+  "importIncludeDuplicatesToggle": "Также импортировать карты, дублирующие существующие",
+  "importConfirmButton": "Импортировать",
+  "importSuccessTitle": "Импорт завершён",
+  "importSuccessBody": "{added, plural, =0 {Карты не добавлены} one {Добавлена 1 карта} few {Добавлено {added} карты} many {Добавлено {added} карт} other {Добавлено {added} карты}}, {skipped, plural, =0 {дубликатов не пропущено} one {пропущен 1 дубликат} few {пропущено {skipped} дубликата} many {пропущено {skipped} дубликатов} other {пропущено {skipped} дубликата}}",
 
   "serverSettingsTitle": "Сервер",
   "serverSettingsAddressLabel": "Адрес сервера",

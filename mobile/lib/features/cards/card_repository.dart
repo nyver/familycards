@@ -88,6 +88,35 @@ class CardRepository {
     return id;
   }
 
+  /// Imports cards decoded from a local export archive (see
+  /// features/settings/import_service.dart). Each payload goes through the
+  /// same [createCard] path as manual entry - fresh UUIDv7 id, marked
+  /// dirty - unless it duplicates an existing visible card by store name
+  /// and card number, in which case it is skipped unless
+  /// [includeDuplicates] is true.
+  Future<ImportResult> importCards(
+    List<CardPayload> payloads, {
+    required bool includeDuplicates,
+  }) async {
+    var added = 0;
+    var skippedDuplicates = 0;
+    for (final payload in payloads) {
+      if (!includeDuplicates) {
+        final isDuplicate = await dao.existsVisibleByStoreAndNumber(
+          payload.storeName,
+          payload.cardNumber,
+        );
+        if (isDuplicate) {
+          skippedDuplicates++;
+          continue;
+        }
+      }
+      await createCard(payload);
+      added++;
+    }
+    return ImportResult(added: added, skippedDuplicates: skippedDuplicates);
+  }
+
   /// Applies an edit to an existing card. If the new payload's canonical
   /// content is identical to what is already stored, this is a no-op:
   /// updatedAt is not bumped and the card is not marked dirty, so an
@@ -143,4 +172,12 @@ class CardRepository {
         .millisecondsSinceEpoch;
     return dao.purgeTrashOlderThan(cutoff);
   }
+}
+
+/// Outcome of [CardRepository.importCards]: how many cards were added and
+/// how many were skipped because they duplicated an existing card.
+class ImportResult {
+  final int added;
+  final int skippedDuplicates;
+  const ImportResult({required this.added, required this.skippedDuplicates});
 }

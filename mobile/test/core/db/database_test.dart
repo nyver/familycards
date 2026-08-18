@@ -172,6 +172,73 @@ void main() {
     },
   );
 
+  test(
+    'existsVisibleByStoreAndNumber finds a matching visible card',
+    () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.cardsDao.insertNewCard(
+        CardsCompanion.insert(
+          id: 'card-4',
+          storeName: 'Pyaterochka',
+          cardNumber: '4600000000000',
+          barcodeFormat: 'ean13',
+          color: 0xFF008C44,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      expect(
+        await db.cardsDao.existsVisibleByStoreAndNumber(
+          'Pyaterochka',
+          '4600000000000',
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'existsVisibleByStoreAndNumber returns false when nothing matches',
+    () async {
+      expect(
+        await db.cardsDao.existsVisibleByStoreAndNumber(
+          'Nonexistent',
+          '000',
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'existsVisibleByStoreAndNumber ignores a deleted card with the same '
+    'store and number',
+    () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.cardsDao.insertNewCard(
+        CardsCompanion.insert(
+          id: 'card-5',
+          storeName: 'Magnit',
+          cardNumber: '1234567890128',
+          barcodeFormat: 'ean13',
+          color: 0xFFE31E24,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await db.cardsDao.softDelete('card-5', now + 1, now + 1);
+
+      expect(
+        await db.cardsDao.existsVisibleByStoreAndNumber(
+          'Magnit',
+          '1234567890128',
+        ),
+        isFalse,
+      );
+    },
+  );
+
   test('local blob metadata round-trips and tracks upload state', () async {
     await db.localBlobsDao.recordBlob(
       LocalBlobsCompanion.insert(
