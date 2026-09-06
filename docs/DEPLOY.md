@@ -36,7 +36,7 @@ EOF
 docker compose up -d --build
 ```
 
-`docker-compose.yml` собирает образ из `server/Dockerfile` (multi-stage, distroless, `CGO_ENABLED=0`), пробрасывает порт `8443` и монтирует volume `wallet-data` под `/data`. Сервер слушает `:8443` внутри контейнера — снаружи контейнера ничего, кроме Caddy, обращаться к нему не должно.
+`docker-compose.yml` собирает образ из `server/Dockerfile` (multi-stage, distroless, `CGO_ENABLED=0`), пробрасывает порт `127.0.0.1:8443:8443` и монтирует volume `wallet-data` под `/data`. Сервер слушает `:8443` внутри контейнера, а порт на хосте публикуется только на loopback — снаружи хоста ничего, кроме Caddy, обращаться к нему не должно.
 
 Проверка:
 

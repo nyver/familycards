@@ -8,7 +8,7 @@ services:
     image: familycards/wallet:latest
     restart: unless-stopped
     ports:
-      - "8443:8443"
+      - "127.0.0.1:8443:8443"
     environment:
       WALLET_ADDR: ":8443"
       WALLET_DB_PATH: "/data/wallet.db"
