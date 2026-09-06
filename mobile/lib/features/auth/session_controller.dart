@@ -19,6 +19,7 @@ import '../../core/net/dto/dto.dart';
 import '../../core/net/secure_token_store.dart';
 import '../../core/result.dart';
 import '../../core/storage/key_value_store.dart';
+import '../settings/security_settings_store.dart';
 import 'auth_state.dart';
 import 'identity_store.dart';
 
@@ -41,6 +42,7 @@ class SessionController extends StateNotifier<AuthState> {
   final AppDatabase database;
   final IdentityStore identityStore;
   final VaultKeyHolder vaultKeyHolder;
+  final SecuritySettingsStore securitySettingsStore;
   late final SecureTokenStore tokenStore;
   late final ApiClient apiClient;
 
@@ -52,6 +54,7 @@ class SessionController extends StateNotifier<AuthState> {
     required this.database,
     IdentityStore? identityStore,
     VaultKeyHolder? vaultKeyHolder,
+    SecuritySettingsStore? securitySettingsStore,
     KeyValueStore? keyValueStore,
   }) : identityStore = identityStore ?? IdentityStore(storage: keyValueStore),
        vaultKeyHolder =
@@ -59,6 +62,8 @@ class SessionController extends StateNotifier<AuthState> {
            VaultKeyHolder(
              secureStore: SecureVaultKeyStore(storage: keyValueStore),
            ),
+       securitySettingsStore =
+           securitySettingsStore ?? SecuritySettingsStore(storage: keyValueStore),
        super(const AuthLoading()) {
     tokenStore = SecureTokenStore(
       storage: keyValueStore,
@@ -463,6 +468,7 @@ class SessionController extends StateNotifier<AuthState> {
         keyEncryptionKey: kek,
       );
       vaultKeyHolder.unlock(vaultKey);
+      await _repersistBiometricKeyIfEnabled();
       state = AuthReady(identity);
       return const Result.ok(null);
     } on DecryptionFailedException catch (e) {
@@ -633,7 +639,35 @@ class SessionController extends StateNotifier<AuthState> {
     await identityStore.save(identity);
 
     vaultKeyHolder.unlock(vaultKey);
+    await _repersistBiometricKeyIfEnabled();
     state = AuthReady(identity);
+  }
+
+  /// Re-persists the just-unlocked key for biometric unlock whenever the
+  /// user has it enabled, so the persisted copy always tracks the current
+  /// vault key. Without this, the *toggle* being on stops meaning a
+  /// working biometric unlock the moment anything clears the persisted
+  /// copy without also clearing the toggle - which changeServerAndWipeLocalData
+  /// and logout both do (they wipe the key but intentionally don't touch
+  /// security settings, since that's a device preference, not account
+  /// state). Concretely: after switching servers or logging out and back
+  /// in, the biometric prompt would keep firing (the toggle still says
+  /// "on") but never actually unlock anything (no key left to read),
+  /// silently stranding the user on the password screen. Called on every
+  /// successful password-based unlock and fresh login/bootstrap/join/
+  /// recovery, so the persisted copy is refreshed automatically instead
+  /// of requiring a manual toggle-off/toggle-on in settings. Best-effort:
+  /// a secure-storage failure here must not block the unlock/login itself
+  /// that already succeeded.
+  Future<void> _repersistBiometricKeyIfEnabled() async {
+    try {
+      if (await securitySettingsStore.isBiometricEnabled()) {
+        await vaultKeyHolder.persistIfBiometricEnabled();
+      }
+    } catch (_) {
+      // Best-effort - biometric unlock simply won't work until the next
+      // successful unlock retries this, which is no worse than today.
+    }
   }
 
   Uint8List _randomSalt() => _randomBytes(16);

@@ -154,6 +154,71 @@ void main() {
     expect(second.state, isA<AuthReady>());
   });
 
+  test(
+    'a password unlock re-persists the biometric key, so a stale toggle '
+    "left on by a wipe (change-server/logout) doesn't strand the user on "
+    'the password screen forever',
+    () async {
+      final store = InMemoryKeyValueStore();
+      final db1 = AppDatabase.forTesting(NativeDatabase.memory());
+      final first = SessionController(database: db1, keyValueStore: store);
+      await pumpEventQueue();
+
+      await first.checkAndSetServer(server.baseUrl);
+      final pending = await first.prepareNewVault(wordlist);
+      await first.completeBootstrap(
+        vault: pending,
+        login: 'bob',
+        displayName: 'Bob',
+        password: 'a very good password indeed',
+        bootstrapToken: server.bootstrapToken,
+        deviceName: 'Device 1',
+        devicePlatform: 'android',
+      );
+
+      // Simulate the user turning biometric unlock on in settings (see
+      // security_screen.dart's _setEnabled(true)) and then something that
+      // wipes the persisted key without touching that toggle - both
+      // changeServerAndWipeLocalData and logout do exactly this today.
+      await first.securitySettingsStore.setBiometricEnabled(true);
+      await first.vaultKeyHolder.persistIfBiometricEnabled();
+      await first.vaultKeyHolder.clearPersisted();
+
+      // Cold restart: the toggle still says "on", but there is no
+      // persisted key to read - this is the exact state that used to
+      // leave the biometric prompt firing for nothing, stranding the user
+      // on the password field with zero feedback.
+      final db2 = AppDatabase.forTesting(NativeDatabase.memory());
+      final second = SessionController(database: db2, keyValueStore: store);
+      await pumpEventQueue();
+      expect(second.state, isA<AuthNeedsUnlock>());
+      expect(await second.securitySettingsStore.isBiometricEnabled(), isTrue);
+      expect(
+        await second.vaultKeyHolder.unlockFromPersisted(),
+        isFalse,
+        reason: 'reproduces the bug: nothing persisted despite the toggle',
+      );
+
+      final unlock = await second.unlockWithPassword(
+        'a very good password indeed',
+      );
+      expect(unlock.isOk, isTrue, reason: unlock.errorOrNull?.toString());
+
+      // The fix: unlocking with the password while the toggle is on must
+      // silently refresh the persisted copy, so biometric unlock recovers
+      // on its own - no need to manually toggle it off and back on.
+      final db3 = AppDatabase.forTesting(NativeDatabase.memory());
+      final third = SessionController(database: db3, keyValueStore: store);
+      await pumpEventQueue();
+      expect(
+        await third.vaultKeyHolder.unlockFromPersisted(),
+        isTrue,
+        reason: 'biometric unlock should be self-healed after one password unlock',
+      );
+      expect(third.vaultKeyHolder.isUnlocked, isTrue);
+    },
+  );
+
   test('logout revokes the session, clears local data, and keeps the server address', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final controller = SessionController(
