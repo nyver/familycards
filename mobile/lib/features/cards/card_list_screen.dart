@@ -208,8 +208,7 @@ class _CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(card.color);
-    final isDark = color.computeLuminance() < 0.5;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final textColor = cardForeground(color);
 
     return Material(
       color: color,

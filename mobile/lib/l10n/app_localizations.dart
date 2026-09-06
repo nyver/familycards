@@ -134,6 +134,48 @@ abstract class AppLocalizations {
   /// **'This does not look like a Family Card Wallet server.'**
   String get onboardingServerIncompatible;
 
+  /// No description provided for @certificateFingerprintLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate fingerprint (optional)'**
+  String get certificateFingerprintLabel;
+
+  /// No description provided for @certificateFingerprintHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the SHA-256 fingerprint from the server\'s startup log to verify it before connecting.'**
+  String get certificateFingerprintHelper;
+
+  /// No description provided for @certificateFingerprintInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid 32-byte SHA-256 fingerprint (64 hex characters, with or without separators).'**
+  String get certificateFingerprintInvalid;
+
+  /// No description provided for @certificateMismatchMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The server\'s certificate does not match this fingerprint.'**
+  String get certificateMismatchMessage;
+
+  /// No description provided for @certificateConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify the server\'s certificate'**
+  String get certificateConfirmTitle;
+
+  /// No description provided for @certificateConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate is not automatically trusted by your device. Compare the fingerprint below with the one printed in the server\'s startup log before continuing - there is no way to skip this check.'**
+  String get certificateConfirmBody;
+
+  /// No description provided for @certificateConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'It matches, pin it'**
+  String get certificateConfirmButton;
+
   /// No description provided for @startCreateVault.
   ///
   /// In en, this message translates to:
@@ -451,6 +493,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Color'**
   String get colorLabel;
+
+  /// No description provided for @cardEditorLogoPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Logo preview'**
+  String get cardEditorLogoPreviewLabel;
 
   /// No description provided for @customFieldsSection.
   ///
@@ -1045,6 +1093,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change server'**
   String get serverSettingsChangeAddressButton;
+
+  /// No description provided for @serverSettingsCertificateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate pin'**
+  String get serverSettingsCertificateTitle;
+
+  /// No description provided for @serverSettingsCertificateNotPinned.
+  ///
+  /// In en, this message translates to:
+  /// **'Not pinned - using system certificate authorities'**
+  String get serverSettingsCertificateNotPinned;
+
+  /// No description provided for @serverSettingsCertificatePinButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin certificate'**
+  String get serverSettingsCertificatePinButton;
+
+  /// No description provided for @serverSettingsCertificateReplaceButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get serverSettingsCertificateReplaceButton;
+
+  /// No description provided for @serverSettingsCertificateRemoveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get serverSettingsCertificateRemoveButton;
+
+  /// No description provided for @serverSettingsCertificateMismatchNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync is failing because the server\'s certificate no longer matches the pinned fingerprint. Replace or remove the pin to continue.'**
+  String get serverSettingsCertificateMismatchNotice;
+
+  /// No description provided for @serverSettingsCertificateAcmeWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate is publicly trusted'**
+  String get serverSettingsCertificateAcmeWarningTitle;
+
+  /// No description provided for @serverSettingsCertificateAcmeWarningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This certificate also validates through your system\'s certificate authorities, which usually means it renews automatically. Renewal changes the fingerprint, and this pin will need to be updated when that happens.'**
+  String get serverSettingsCertificateAcmeWarningBody;
+
+  /// No description provided for @serverSettingsCertificateRemoveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the certificate pin?'**
+  String get serverSettingsCertificateRemoveConfirmTitle;
+
+  /// No description provided for @serverSettingsCertificateRemoveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The app will go back to verifying this server\'s certificate through your system\'s certificate authorities.'**
+  String get serverSettingsCertificateRemoveConfirmBody;
 
   /// No description provided for @logoutConfirmTitle.
   ///

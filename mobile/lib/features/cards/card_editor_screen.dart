@@ -12,6 +12,7 @@ import '../../core/db/database.dart';
 import '../../core/providers.dart';
 import '../../data/store_catalog.dart';
 import '../../l10n/app_localizations.dart';
+import 'generated_logo.dart';
 import 'photo_attachment.dart';
 import 'scanner_screen.dart';
 
@@ -277,6 +278,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             _StoreNameField(
               controller: _storeNameController,
               onSelected: _onStoreSelected,
+              onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 16),
             Row(
@@ -325,6 +327,17 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 ),
               ),
             ],
+            const SizedBox(height: 16),
+            Text(
+              l10n.cardEditorLogoPreviewLabel,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            _LogoPreview(
+              color: _color,
+              logoAsset: _logoAsset,
+              storeName: _storeNameController.text,
+            ),
             const SizedBox(height: 16),
             Text(
               l10n.colorLabel,
@@ -399,7 +412,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 class _StoreNameField extends ConsumerWidget {
   final TextEditingController controller;
   final void Function(StoreCatalogEntry) onSelected;
-  const _StoreNameField({required this.controller, required this.onSelected});
+  final VoidCallback onChanged;
+  const _StoreNameField({
+    required this.controller,
+    required this.onSelected,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -415,15 +433,29 @@ class _StoreNameField extends ConsumerWidget {
         },
         onSelected: onSelected,
         fieldViewBuilder: (context, fieldController, focusNode, onSubmitted) {
-          // Keep the outer controller (used for validation/save) mirrored.
-          fieldController.text = controller.text;
-          fieldController.addListener(
-            () => controller.text = fieldController.text,
-          );
+          // Mirror the outer controller only when its text actually
+          // changed (e.g. a catalog selection) - reassigning .text
+          // unconditionally on every rebuild resets the field's cursor
+          // position on every keystroke and, worse, re-notifies this
+          // field's own listeners while RawAutocomplete is mid-build,
+          // which crashes with "setState() called during build".
+          if (fieldController.text != controller.text) {
+            fieldController.text = controller.text;
+          }
           return TextField(
             controller: fieldController,
             focusNode: focusNode,
             decoration: InputDecoration(labelText: l10n.storeNameLabel),
+            // TextField.onChanged is wired once by EditableText itself
+            // (not re-registered per rebuild like a manual
+            // fieldController.addListener would be), so this can't
+            // accumulate duplicate mirrored writes across rebuilds - the
+            // same reason the barcode preview uses onChanged rather than
+            // a controller listener for the card number field.
+            onChanged: (value) {
+              controller.text = value;
+              onChanged();
+            },
           );
         },
       ),
@@ -435,6 +467,48 @@ class _StoreNameField extends ConsumerWidget {
         controller: controller,
         decoration: InputDecoration(labelText: l10n.storeNameLabel),
       ),
+    );
+  }
+}
+
+/// Shows exactly what the card will look like in the card list: a rounded
+/// swatch in the currently selected color, with either the catalog's
+/// brand logo (when one is set) or a generated monogram derived from the
+/// current store name - see [cardForeground] and [GeneratedLogo], the
+/// same functions the list tile uses, so the two can never disagree.
+class _LogoPreview extends StatelessWidget {
+  final int color;
+  final String? logoAsset;
+  final String storeName;
+
+  const _LogoPreview({
+    required this.color,
+    required this.logoAsset,
+    required this.storeName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = Color(color);
+    final logoAsset = this.logoAsset;
+    return Container(
+      width: 64,
+      height: 64,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: logoAsset != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(logoAsset, width: 40, height: 40),
+            )
+          : GeneratedLogo(
+              storeName: storeName,
+              foreground: cardForeground(cardColor),
+              size: 40,
+            ),
     );
   }
 }

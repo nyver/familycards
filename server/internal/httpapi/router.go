@@ -57,17 +57,22 @@ type AdminEndpoints struct {
 // RouterConfig bundles everything Router needs to assemble the full route
 // table and middleware chain.
 type RouterConfig struct {
-	ReadDB         *sql.DB
-	Auth           AuthEndpoints
-	Membership     MembershipEndpoints
-	Sync           SyncEndpoints
-	Blobs          BlobEndpoints
-	Admin          AdminEndpoints
-	RequireAuth    func(http.Handler) http.Handler
-	AllowInsecure  bool
-	TrustProxy     bool
-	AuthLimiter    *ratelimit.Limiter
-	GeneralLimiter *ratelimit.Limiter
+	ReadDB        *sql.DB
+	Auth          AuthEndpoints
+	Membership    MembershipEndpoints
+	Sync          SyncEndpoints
+	Blobs         BlobEndpoints
+	Admin         AdminEndpoints
+	RequireAuth   func(http.Handler) http.Handler
+	AllowInsecure bool
+	TrustProxy    bool
+	// TLSTerminatedLocally is true when the server terminates TLS itself
+	// (WALLET_TLS_MODE acme/file/selfsigned) rather than an external
+	// reverse proxy. Its zero value (false) reproduces the pre-existing
+	// "off" behavior exactly: X-Forwarded-Proto decides security.
+	TLSTerminatedLocally bool
+	AuthLimiter          *ratelimit.Limiter
+	GeneralLimiter       *ratelimit.Limiter
 }
 
 // Router builds the full *http.ServeMux with routing, middleware, and rate
@@ -121,7 +126,7 @@ func Router(cfg RouterConfig) http.Handler {
 	var handler http.Handler = mux
 	handler = LimitBody(handler)
 	handler = dualRateLimit(cfg.AuthLimiter, cfg.GeneralLimiter)(handler)
-	handler = EnforceHTTPS(cfg.AllowInsecure)(handler)
+	handler = EnforceHTTPS(cfg.TLSTerminatedLocally, cfg.AllowInsecure)(handler)
 	handler = ResolveClientIP(cfg.TrustProxy)(handler)
 	handler = RequestLogger(handler)
 	handler = Recover(handler)

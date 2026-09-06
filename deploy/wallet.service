@@ -23,8 +23,16 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/opt/wallet/data
-CapabilityBoundingSet=
-AmbientCapabilities=
+# CAP_NET_BIND_SERVICE lets the non-root "wallet" user bind privileged
+# ports 80/443. Needed only when the server terminates TLS itself
+# (WALLET_TLS_MODE=acme/file/selfsigned, typically WALLET_ADDR=:443 and
+# WALLET_HTTP_ADDR=:80) - uncomment both lines in that case. Leave
+# commented out for the default WALLET_TLS_MODE=off setup (a
+# non-privileged port such as 127.0.0.1:8443 behind Caddy): granting the
+# capability unconditionally would let a compromised process bind
+# privileged ports it has no other reason to touch.
+#CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+#AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target

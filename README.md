@@ -57,6 +57,10 @@ cd deploy
 docker compose up -d --build
 ```
 
+### TLS
+
+By default (`WALLET_TLS_MODE=off`) the server expects an external TLS-terminating reverse proxy in front of it (see [docs/DEPLOY.md](docs/DEPLOY.md) for Caddy). It can also terminate TLS itself, with no proxy required: `WALLET_TLS_MODE=acme` (automatic Let's Encrypt certificate for a VPS with a public domain), `file` (load a certificate/key pair from disk), or `selfsigned` (the server issues and persists its own certificate; its SHA-256 fingerprint is printed at startup for pinning in the mobile app). See [config.example.yaml](config.example.yaml) for the full set of `WALLET_TLS_*` variables and the pre-built `docker-compose.yml` variants in `deploy/`.
+
 ### Production deployment
 
 See [docs/DEPLOY.md](docs/DEPLOY.md) for a full walkthrough: systemd unit, Caddy as a TLS-terminating reverse proxy, and scheduled backups.

@@ -3,7 +3,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,6 +13,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"golang.org/x/crypto/acme/autocert"
 
 	"familycards/server/internal/admin"
 	"familycards/server/internal/auth"
@@ -79,6 +83,34 @@ func main() {
 	go cleanupTombstones(ctx, db.Write, cfg.TombstoneDays)
 	go runBlobGC(ctx, db, blobStore)
 
+	// tlsTerminatedLocally and trustProxy are derived from cfg.TLSMode
+	// here, in the one place that matters: whether the process itself
+	// terminates TLS. See the comment on RouterConfig below for why they
+	// must move together.
+	tlsTerminatedLocally := cfg.TLSMode != config.TLSModeOff
+	trustProxy := !cfg.AllowInsecure && !tlsTerminatedLocally
+
+	var tlsConfig *tls.Config
+	var acmeManager *autocert.Manager
+	if tlsTerminatedLocally {
+		if cfg.TLSMode == config.TLSModeACME || cfg.TLSMode == config.TLSModeSelfSigned {
+			// DirCache/selfsigned.LoadOrIssue also create this directory,
+			// but doing it explicitly upfront with the intended mode
+			// avoids relying on their defaults and fails fast if the
+			// parent path is not writable.
+			if err := os.MkdirAll(cfg.TLSCacheDir, 0o700); err != nil {
+				slog.Error("failed to create TLS cache directory", "error", err)
+				os.Exit(1)
+			}
+		}
+		var err error
+		tlsConfig, acmeManager, err = buildTLSConfig(cfg)
+		if err != nil {
+			slog.Error("failed to configure TLS", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	handler := httpapi.Router(httpapi.RouterConfig{
 		ReadDB: db.Read,
 		Auth: httpapi.AuthEndpoints{
@@ -113,39 +145,100 @@ func main() {
 		},
 		RequireAuth:   authMiddleware.RequireAuth,
 		AllowInsecure: cfg.AllowInsecure,
-		// Forwarded headers are only trustworthy when a reverse proxy sits
-		// in front of us (the standard production deployment - see
-		// docs/DEPLOY.md). In insecure/local-dev mode there is no proxy,
-		// so trusting X-Forwarded-For would let any client spoof its IP
-		// and bypass rate limiting.
-		TrustProxy:     !cfg.AllowInsecure,
-		AuthLimiter:    authLimiter,
-		GeneralLimiter: generalLimiter,
+		// tlsTerminatedLocally and trustProxy are derived from cfg.TLSMode
+		// in this one place so they can never disagree: TrustProxy must be
+		// false whenever we terminate TLS ourselves, since there is then
+		// no real reverse proxy to have set X-Forwarded-For, and trusting
+		// it would let any client forge its IP and bypass rate limiting.
+		// In the "off" mode (behind an external proxy such as Caddy) the
+		// forwarded headers remain trustworthy, exactly as before.
+		TLSTerminatedLocally: tlsTerminatedLocally,
+		TrustProxy:           trustProxy,
+		AuthLimiter:          authLimiter,
+		GeneralLimiter:       generalLimiter,
 	})
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
+		TLSConfig:         tlsConfig,
 	}
 
+	// Both listeners report their fatal errors on this shared channel so a
+	// bind failure on either one triggers a coordinated shutdown of both,
+	// rather than leaving an already-running listener stuck (the old code
+	// called os.Exit(1) directly from the goroutine, which could not do
+	// that with a second listener in the picture).
+	errCh := make(chan error, 2)
+
 	go func() {
-		slog.Info("wallet server starting", "addr", cfg.Addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("server failed", "error", err)
-			os.Exit(1)
+		slog.Info("wallet server starting", "addr", cfg.Addr, "tls_mode", string(cfg.TLSMode))
+		var err error
+		if tlsTerminatedLocally {
+			err = srv.ListenAndServeTLS("", "")
+		} else {
+			err = srv.ListenAndServe()
 		}
+		if err != nil && err != http.ErrServerClosed {
+			errCh <- fmt.Errorf("listen on %s: %w", cfg.Addr, err)
+			return
+		}
+		errCh <- nil
 	}()
+
+	var httpSrv *http.Server
+	if cfg.HTTPAddr != "" {
+		// This listener's handler never routes into the main API router:
+		// every path except the ACME challenge gets nothing but a 308
+		// redirect, so a request with a body (e.g. a login attempt) is
+		// never read or acted on over the plaintext port.
+		var redirectHandler http.Handler = newRedirectHandler(httpsPort(cfg.Addr))
+		if cfg.TLSMode == config.TLSModeACME && acmeManager != nil {
+			redirectHandler = acmeManager.HTTPHandler(redirectHandler)
+		}
+		httpSrv = &http.Server{
+			Addr:              cfg.HTTPAddr,
+			Handler:           redirectHandler,
+			ReadHeaderTimeout: 10 * time.Second,
+		}
+		go func() {
+			slog.Info("wallet http redirect listener starting", "addr", cfg.HTTPAddr)
+			if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				errCh <- fmt.Errorf("listen on %s: %w", cfg.HTTPAddr, err)
+				return
+			}
+			errCh <- nil
+		}()
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
 
-	slog.Info("wallet server shutting down")
+	exitCode := 0
+	select {
+	case <-stop:
+		slog.Info("wallet server shutting down")
+	case err := <-errCh:
+		if err != nil {
+			slog.Error("server failed", "error", err)
+			exitCode = 1
+		}
+	}
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		slog.Error("graceful shutdown failed", "error", err)
+		slog.Error("graceful shutdown failed", "error", err, "addr", cfg.Addr)
+	}
+	if httpSrv != nil {
+		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("graceful shutdown failed", "error", err, "addr", cfg.HTTPAddr)
+		}
+	}
+
+	if exitCode != 0 {
+		os.Exit(exitCode)
 	}
 }
 

@@ -26,6 +26,14 @@ String initialsFor(String storeName) {
   return (first + second).toUpperCase();
 }
 
+/// The single source of truth for choosing a readable text/icon color on
+/// top of a card's background color - used by both the card list tile and
+/// the editor's live preview so they can never drift apart. Below the 0.5
+/// luminance threshold (a dark background) white reads best; at or above
+/// it (a light background), a soft black does.
+Color cardForeground(Color cardColor) =>
+    cardColor.computeLuminance() < 0.5 ? Colors.white : Colors.black87;
+
 /// A generated placeholder logo shown in place of a bundled catalog logo:
 /// a rounded badge with the store name's monogram, tinted to match the
 /// card tile it sits on.

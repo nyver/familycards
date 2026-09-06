@@ -30,6 +30,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'This does not look like a Family Card Wallet server.';
 
   @override
+  String get certificateFingerprintLabel =>
+      'Certificate fingerprint (optional)';
+
+  @override
+  String get certificateFingerprintHelper =>
+      'Paste the SHA-256 fingerprint from the server\'s startup log to verify it before connecting.';
+
+  @override
+  String get certificateFingerprintInvalid =>
+      'Enter a valid 32-byte SHA-256 fingerprint (64 hex characters, with or without separators).';
+
+  @override
+  String get certificateMismatchMessage =>
+      'The server\'s certificate does not match this fingerprint.';
+
+  @override
+  String get certificateConfirmTitle => 'Verify the server\'s certificate';
+
+  @override
+  String get certificateConfirmBody =>
+      'This certificate is not automatically trusted by your device. Compare the fingerprint below with the one printed in the server\'s startup log before continuing - there is no way to skip this check.';
+
+  @override
+  String get certificateConfirmButton => 'It matches, pin it';
+
+  @override
   String get startCreateVault => 'Create a family vault';
 
   @override
@@ -205,6 +231,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get colorLabel => 'Color';
+
+  @override
+  String get cardEditorLogoPreviewLabel => 'Logo preview';
 
   @override
   String get customFieldsSection => 'Custom fields';
@@ -574,6 +603,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serverSettingsChangeAddressButton => 'Change server';
+
+  @override
+  String get serverSettingsCertificateTitle => 'Certificate pin';
+
+  @override
+  String get serverSettingsCertificateNotPinned =>
+      'Not pinned - using system certificate authorities';
+
+  @override
+  String get serverSettingsCertificatePinButton => 'Pin certificate';
+
+  @override
+  String get serverSettingsCertificateReplaceButton => 'Replace';
+
+  @override
+  String get serverSettingsCertificateRemoveButton => 'Remove';
+
+  @override
+  String get serverSettingsCertificateMismatchNotice =>
+      'Sync is failing because the server\'s certificate no longer matches the pinned fingerprint. Replace or remove the pin to continue.';
+
+  @override
+  String get serverSettingsCertificateAcmeWarningTitle =>
+      'This certificate is publicly trusted';
+
+  @override
+  String get serverSettingsCertificateAcmeWarningBody =>
+      'This certificate also validates through your system\'s certificate authorities, which usually means it renews automatically. Renewal changes the fingerprint, and this pin will need to be updated when that happens.';
+
+  @override
+  String get serverSettingsCertificateRemoveConfirmTitle =>
+      'Remove the certificate pin?';
+
+  @override
+  String get serverSettingsCertificateRemoveConfirmBody =>
+      'The app will go back to verifying this server\'s certificate through your system\'s certificate authorities.';
 
   @override
   String get logoutConfirmTitle => 'Log out?';

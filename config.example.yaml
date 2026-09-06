@@ -40,8 +40,82 @@ WALLET_LOG_LEVEL: "info"
 # Set to "true" only for local development without TLS. In this mode the
 # server also stops trusting X-Forwarded-For for rate limiting, since
 # there is no reverse proxy to have set it. Never set this in production.
+# Cannot be combined with WALLET_TLS_MODE other than "off" - the server
+# refuses to start in that case, since "terminate TLS myself and also
+# accept unencrypted requests" has no sensible meaning.
 WALLET_ALLOW_INSECURE: "false"
 
 # How many days a deleted card (tombstone) is retained before being
 # physically purged from the database.
 WALLET_TOMBSTONE_DAYS: 90
+
+# --- TLS termination ---
+#
+# By default (WALLET_TLS_MODE=off) the server speaks plain HTTP and relies
+# on an external reverse proxy (e.g. Caddy, see deploy/Caddyfile) to
+# terminate TLS and set X-Forwarded-Proto/X-Forwarded-For. Set a non-"off"
+# mode to have the server terminate TLS itself instead, so a single binary
+# on a VPS does not need a proxy in front of it. In every non-"off" mode
+# the server trusts only the actual TLS connection (r.TLS != nil) for
+# security decisions and ignores X-Forwarded-* entirely.
+
+# One of: off | acme | file | selfsigned.
+#   off        - TLS terminated by an external reverse proxy (default).
+#   acme       - automatic certificate via Let's Encrypt, for a VPS with a
+#                public IP and a domain that resolves to it. Requires
+#                WALLET_TLS_DOMAINS.
+#   file       - load a certificate/key pair from disk. Requires
+#                WALLET_TLS_CERT_FILE and WALLET_TLS_KEY_FILE.
+#   selfsigned - the server issues and persists its own certificate, no
+#                external services or utilities involved. Works out of the
+#                box with docker compose and no domain; the certificate's
+#                SHA-256 fingerprint is printed at startup so it can be
+#                pinned in the mobile app.
+WALLET_TLS_MODE: "off"
+
+# Comma-separated list of domain names (or IP addresses), used differently
+# per mode:
+#   acme       - required; the server issues a certificate for exactly
+#                these names and refuses TLS handshakes for any other SNI
+#                name (this also protects Let's Encrypt's rate limit from
+#                abuse by third parties pointing other hostnames at this
+#                server's IP).
+#   selfsigned - optional; the names to include as certificate SANs (IP
+#                addresses become IP-SANs, everything else a DNS-SAN).
+#                When left empty, the server defaults to "localhost",
+#                "127.0.0.1", and the host part of WALLET_ADDR when that
+#                host part is non-empty and not a wildcard bind (e.g.
+#                WALLET_ADDR=:8443 has no usable host part and is skipped;
+#                WALLET_ADDR=vps.example.com:8443 adds "vps.example.com").
+#   file, off  - unused.
+WALLET_TLS_DOMAINS: ""
+
+# Path to a PEM certificate (and matching private key) to load at startup.
+# Both are required together when WALLET_TLS_MODE=file; the server refuses
+# to start if the pair cannot be loaded.
+WALLET_TLS_CERT_FILE: ""
+WALLET_TLS_KEY_FILE: ""
+
+# Directory used to persist TLS state across restarts: the ACME account
+# key and issued certificate in "acme" mode, or the self-signed
+# certificate/key in "selfsigned" mode. Reused automatically on restart so
+# the certificate (and its fingerprint, if pinned by a client) does not
+# change on every restart. Defaults to a "certs" directory next to
+# WALLET_DB_PATH, which - in the default Docker layout - already lives
+# inside the "wallet-data" volume, so it survives container recreation
+# without extra configuration. Unused when WALLET_TLS_MODE is "off" or
+# "file".
+WALLET_TLS_CACHE_DIR: ""
+
+# Contact email passed to the ACME provider (Let's Encrypt) for expiry and
+# problem notifications. Optional; only used when WALLET_TLS_MODE=acme.
+WALLET_TLS_ACME_EMAIL: ""
+
+# When set, the server additionally listens on this address over plain
+# HTTP and answers every request with a 308 redirect to the same path on
+# "https" (in "acme" mode, requests to /.well-known/acme-challenge/ are
+# served instead of redirected). This listener never reaches the
+# application's API handlers - it only ever redirects or serves the ACME
+# challenge. Typically ":80" alongside WALLET_ADDR=":443". Leave empty to
+# disable it (the default).
+WALLET_HTTP_ADDR: ""

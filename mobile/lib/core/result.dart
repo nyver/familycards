@@ -77,6 +77,11 @@ enum AppErrorKind {
   /// tampering detected).
   crypto,
 
+  /// The server's TLS certificate did not match the pinned fingerprint
+  /// (or, before any pin exists, is not trusted by the system's CA
+  /// store) - see core/net/certificate_fingerprint.dart.
+  certificateMismatch,
+
   /// A local storage operation failed (database, filesystem).
   storage,
 
@@ -107,6 +112,8 @@ class AppError implements Exception {
       AppError(AppErrorKind.gone, message, cause: cause);
   factory AppError.crypto(String message, {Object? cause}) =>
       AppError(AppErrorKind.crypto, message, cause: cause);
+  factory AppError.certificateMismatch(String message, {Object? cause}) =>
+      AppError(AppErrorKind.certificateMismatch, message, cause: cause);
   factory AppError.storage(String message, {Object? cause}) =>
       AppError(AppErrorKind.storage, message, cause: cause);
   factory AppError.unknown(String message, {Object? cause}) =>

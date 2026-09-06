@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -16,6 +17,11 @@ import (
 )
 
 func newTestRouter(t *testing.T, allowInsecure bool, authRate, generalRate int) http.Handler {
+	t.Helper()
+	return newTestRouterTLS(t, allowInsecure, false, authRate, generalRate)
+}
+
+func newTestRouterTLS(t *testing.T, allowInsecure, tlsTerminatedLocally bool, authRate, generalRate int) http.Handler {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "wallet.db")
 	db, err := storage.Open(dbPath)
@@ -45,9 +51,11 @@ func newTestRouter(t *testing.T, allowInsecure bool, authRate, generalRate int) 
 				w.WriteHeader(http.StatusUnauthorized)
 			})
 		},
-		AllowInsecure:  allowInsecure,
-		AuthLimiter:    ratelimit.New(authRate, time.Hour),
-		GeneralLimiter: ratelimit.New(generalRate, time.Hour),
+		AllowInsecure:        allowInsecure,
+		TLSTerminatedLocally: tlsTerminatedLocally,
+		TrustProxy:           !tlsTerminatedLocally,
+		AuthLimiter:          ratelimit.New(authRate, time.Hour),
+		GeneralLimiter:       ratelimit.New(generalRate, time.Hour),
 	})
 }
 
@@ -122,6 +130,62 @@ func TestRateLimit_AuthPathStricter(t *testing.T) {
 	}
 	if resp.Header.Get("Retry-After") == "" {
 		t.Error("expected Retry-After header on 429")
+	}
+}
+
+func TestEnforceHTTPS_LocalTLS_AcceptedWithRealTLS(t *testing.T) {
+	handler := newTestRouterTLS(t, false, true, 1000, 1000)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	req.RemoteAddr = "203.0.113.5:1234"
+	req.TLS = &tls.ConnectionState{}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("status with r.TLS set = %d, want 200", rec.Code)
+	}
+}
+
+func TestEnforceHTTPS_LocalTLS_ForgedHeaderRejected(t *testing.T) {
+	handler := newTestRouterTLS(t, false, true, 1000, 1000)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	req.RemoteAddr = "203.0.113.5:1234"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status for plaintext request forging X-Forwarded-Proto = %d, want 400", rec.Code)
+	}
+}
+
+func TestResolveClientIP_LocalTLS_IgnoresForgedForwardedFor(t *testing.T) {
+	// generalRate=1 so a second request sharing the same resolved client
+	// IP is rate limited; if the (forged) X-Forwarded-For header were
+	// trusted instead of RemoteAddr, the two requests below would resolve
+	// to different IPs and neither would be limited.
+	handler := newTestRouterTLS(t, false, true, 1000, 1)
+
+	newReq := func(forwardedFor string) *http.Request {
+		req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+		req.RemoteAddr = "203.0.113.5:1234"
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("X-Forwarded-For", forwardedFor)
+		return req
+	}
+
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, newReq("198.51.100.1"))
+	if rec1.Code != http.StatusOK {
+		t.Fatalf("first request status = %d, want 200", rec1.Code)
+	}
+
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, newReq("198.51.100.2"))
+	if rec2.Code != http.StatusTooManyRequests {
+		t.Errorf("second request (different forged X-Forwarded-For, same RemoteAddr) status = %d, want 429 (proves RemoteAddr was used, not the forged header)", rec2.Code)
 	}
 }
 

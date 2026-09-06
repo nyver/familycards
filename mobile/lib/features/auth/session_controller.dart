@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import '../../core/crypto/secure_vault_key_store.dart';
 import '../../core/crypto/vault_key.dart';
 import '../../core/db/database.dart';
 import '../../core/net/api_client.dart';
+import '../../core/net/certificate_fingerprint.dart';
 import '../../core/net/dto/dto.dart';
 import '../../core/net/secure_token_store.dart';
 import '../../core/result.dart';
@@ -72,7 +74,13 @@ class SessionController extends StateNotifier<AuthState> {
       state = const AuthNeedsServer();
       return;
     }
-    apiClient.setBaseUrl(address);
+    final pinnedHex = await identityStore.getPinnedCertificateFingerprint();
+    apiClient.setBaseUrl(
+      address,
+      pinnedFingerprint: pinnedHex == null
+          ? null
+          : _parsePersistedFingerprintOrFailClosed(pinnedHex),
+    );
 
     final identity = await identityStore.load();
     if (identity == null) {
@@ -100,27 +108,57 @@ class SessionController extends StateNotifier<AuthState> {
     return 'https://$trimmed';
   }
 
-  /// Checks a candidate server address via GET /v1/health and, if it
-  /// responds like a compatible server, persists it and moves to
-  /// onboarding. Does not change state on failure - the caller shows the
-  /// returned error and lets the user retry.
-  Future<Result<void>> checkAndSetServer(String rawAddress) async {
+  /// Checks a candidate server address (and, if given, the certificate
+  /// fingerprint to pin to it) via GET /v1/health and, if it responds
+  /// like a compatible server, persists both and moves to onboarding.
+  /// Does not change persisted state on failure - the caller shows the
+  /// returned error and lets the user retry, optionally after confirming
+  /// a fingerprint via [probePresentedCertificate].
+  Future<Result<void>> checkAndSetServer(
+    String rawAddress, {
+    Uint8List? pinnedFingerprint,
+  }) async {
     final address = normalizeServerAddress(rawAddress);
-    final previousBaseUrl = apiClient.currentBaseUrl;
-    apiClient.setBaseUrl(address);
-
-    final result = await apiClient.health();
-    return result.fold(
-      (health) async {
-        await identityStore.setServerAddress(address);
-        state = AuthNeedsOnboarding(address);
-        return const Result.ok(null);
-      },
-      (error) {
-        apiClient.setBaseUrl(previousBaseUrl);
-        return Result.err(error);
-      },
+    final verified = await _verifyServer(
+      address,
+      pinnedFingerprint: pinnedFingerprint,
     );
+    return verified.fold((_) async {
+      apiClient.setBaseUrl(address, pinnedFingerprint: pinnedFingerprint);
+      await identityStore.setServerAddress(address);
+      await identityStore.setPinnedCertificateFingerprint(
+        pinnedFingerprint == null ? null : formatFingerprint(pinnedFingerprint),
+      );
+      state = AuthNeedsOnboarding(address);
+      return const Result.ok(null);
+    }, (error) => Result.err(error));
+  }
+
+  /// Verifies that [address] answers GET /v1/health (optionally pinned to
+  /// [pinnedFingerprint]) without changing anything persisted or
+  /// left applied to [apiClient] - the previous base URL and pin are
+  /// always restored before returning, regardless of outcome. Callers
+  /// that want to keep a successful result apply it explicitly.
+  Future<Result<void>> _verifyServer(
+    String address, {
+    Uint8List? pinnedFingerprint,
+  }) async {
+    final previousBaseUrl = apiClient.currentBaseUrl;
+    final previousPin = apiClient.pinnedFingerprint;
+    apiClient.setBaseUrl(address, pinnedFingerprint: pinnedFingerprint);
+    final result = await apiClient.health();
+    apiClient.setBaseUrl(previousBaseUrl, pinnedFingerprint: previousPin);
+    return result.map((_) {});
+  }
+
+  /// Trust-on-first-use support: attempts to connect to [rawAddress]
+  /// purely to capture the certificate it presents, without validating
+  /// it. Used when a health check fails because no pin exists yet and the
+  /// certificate isn't trusted by the system's CA store - the caller
+  /// shows the user this certificate's fingerprint and, only after
+  /// explicit confirmation, retries [checkAndSetServer] with it pinned.
+  Future<X509Certificate?> probePresentedCertificate(String rawAddress) {
+    return ApiClient.probeCertificate(normalizeServerAddress(rawAddress));
   }
 
   /// Phase 1 of vault creation: generates VK and a recovery phrase purely
@@ -469,22 +507,41 @@ class SessionController extends StateNotifier<AuthState> {
     }
   }
 
-  /// Wipes all local state (identity, tokens, vault key, and the local
-  /// database) and returns to server selection - used when the user
-  /// changes to a different server, which invalidates everything local.
-  Future<void> changeServerAndWipeLocalData(String newAddress) async {
-    await database.cardsDao.watchVisibleCards().first; // ensure db is open
-    for (final table in database.allTables) {
-      await database.delete(table).go();
-    }
-    await identityStore.clearAll();
-    await tokenStore.clear();
-    await vaultKeyHolder.clearPersisted();
-    vaultKeyHolder.lock();
-
+  /// Verifies [newAddress] (and, if given, a certificate fingerprint to
+  /// pin to it) is reachable, then wipes all local state (identity,
+  /// tokens, vault key, and the local database) and moves to onboarding
+  /// against it - used when the user changes to a different server,
+  /// which invalidates everything local. Nothing is wiped and no
+  /// persisted state changes if verification fails - the caller shows
+  /// the returned error and lets the user retry, optionally after
+  /// confirming a fingerprint via [probePresentedCertificate].
+  Future<Result<void>> changeServerAndWipeLocalData(
+    String newAddress, {
+    Uint8List? pinnedFingerprint,
+  }) async {
     final normalized = normalizeServerAddress(newAddress);
-    apiClient.setBaseUrl(normalized);
-    state = const AuthNeedsServer();
+    final verified = await _verifyServer(
+      normalized,
+      pinnedFingerprint: pinnedFingerprint,
+    );
+    return verified.fold((_) async {
+      await database.cardsDao.watchVisibleCards().first; // ensure db is open
+      for (final table in database.allTables) {
+        await database.delete(table).go();
+      }
+      await identityStore.clearAll();
+      await tokenStore.clear();
+      await vaultKeyHolder.clearPersisted();
+      vaultKeyHolder.lock();
+
+      apiClient.setBaseUrl(normalized, pinnedFingerprint: pinnedFingerprint);
+      await identityStore.setServerAddress(normalized);
+      await identityStore.setPinnedCertificateFingerprint(
+        pinnedFingerprint == null ? null : formatFingerprint(pinnedFingerprint),
+      );
+      state = AuthNeedsOnboarding(normalized);
+      return const Result.ok(null);
+    }, (error) => Result.err(error));
   }
 
   /// Signs out of the current account: best-effort revokes this device's
@@ -594,4 +651,15 @@ Uint8List _fromB64(String s) => base64.decode(s);
 Future<String> _sha256Hex(String input) async {
   final digest = await Sha256().hash(utf8.encode(input));
   return digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}
+
+/// Parses a fingerprint read back from [IdentityStore], failing closed (a
+/// fingerprint that can never match any real certificate) rather than
+/// open (no pin at all) if the stored value is somehow unparseable - the
+/// app itself only ever writes a value [formatFingerprint] produced, so
+/// this should not happen, but a corrupted pin must still block the
+/// connection rather than silently fall back to trusting the system's CA
+/// store, which is exactly what pinning exists to override.
+Uint8List _parsePersistedFingerprintOrFailClosed(String stored) {
+  return tryParseSha256Fingerprint(stored) ?? Uint8List(sha256FingerprintLength);
 }

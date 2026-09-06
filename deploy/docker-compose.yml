@@ -1,3 +1,6 @@
+# Default variant: the server listens on plain HTTP and expects a
+# TLS-terminating reverse proxy in front of it (see ../deploy/Caddyfile).
+# This is WALLET_TLS_MODE=off, the default when the variable is unset.
 services:
   wallet:
     build:
@@ -21,3 +24,84 @@ services:
 
 volumes:
   wallet-data:
+
+# ---------------------------------------------------------------------------
+# Alternative: no Caddy, self-signed certificate issued by the server
+# itself. `docker compose up` alone yields working HTTPS with no domain and
+# no external certificate authority - replace the "wallet" service above
+# with this one (do not run both at once, they share the same ports/volume).
+#
+# services:
+#   wallet:
+#     build:
+#       context: ../server
+#     image: familycards/wallet:latest
+#     restart: unless-stopped
+#     ports:
+#       - "80:80"
+#       - "443:443"
+#     environment:
+#       WALLET_ADDR: ":443"
+#       WALLET_HTTP_ADDR: ":80"
+#       WALLET_TLS_MODE: "selfsigned"
+#       # Override from .env (WALLET_TLS_DOMAINS=your-hostname-or-ip) if the
+#       # server is reachable under a name other than localhost/127.0.0.1.
+#       WALLET_TLS_DOMAINS: "${WALLET_TLS_DOMAINS:-}"
+#       # Must live inside the wallet-data volume (not a fresh path), or the
+#       # self-signed certificate - and its pinned fingerprint on already
+#       # paired devices - is lost and regenerated every time the container
+#       # is recreated.
+#       WALLET_TLS_CACHE_DIR: "/data/certs"
+#       WALLET_DB_PATH: "/data/wallet.db"
+#       WALLET_BLOB_DIR: "/data/blobs"
+#       WALLET_JWT_SECRET: "${WALLET_JWT_SECRET:?WALLET_JWT_SECRET must be set, at least 32 bytes}"
+#       WALLET_BOOTSTRAP_TOKEN: "${WALLET_BOOTSTRAP_TOKEN:?WALLET_BOOTSTRAP_TOKEN must be set}"
+#       WALLET_ADMIN_TOKEN: "${WALLET_ADMIN_TOKEN:-}"
+#       WALLET_LOG_LEVEL: "${WALLET_LOG_LEVEL:-info}"
+#       WALLET_TOMBSTONE_DAYS: "${WALLET_TOMBSTONE_DAYS:-90}"
+#     volumes:
+#       - wallet-data:/data
+#
+# volumes:
+#   wallet-data:
+#
+# After `docker compose up`, read the certificate fingerprint from
+# `docker compose logs wallet` (look for "tls certificate fingerprint") and
+# enter it in the mobile app when pairing with this server.
+
+# ---------------------------------------------------------------------------
+# Alternative: no Caddy, automatic ACME (Let's Encrypt) certificate. Only
+# works for a VPS with a public IP and a domain that resolves to it - see
+# docs/DEPLOY.md. Replace the "wallet" service above with this one.
+#
+# services:
+#   wallet:
+#     build:
+#       context: ../server
+#     image: familycards/wallet:latest
+#     restart: unless-stopped
+#     ports:
+#       - "80:80"
+#       - "443:443"
+#     environment:
+#       WALLET_ADDR: ":443"
+#       WALLET_HTTP_ADDR: ":80"
+#       WALLET_TLS_MODE: "acme"
+#       WALLET_TLS_DOMAINS: "${WALLET_TLS_DOMAINS:?WALLET_TLS_DOMAINS must be set, e.g. wallet.example.com}"
+#       WALLET_TLS_ACME_EMAIL: "${WALLET_TLS_ACME_EMAIL:-}"
+#       # Must live inside the wallet-data volume, or the ACME account key
+#       # and issued certificate are lost - and re-issued, against Let's
+#       # Encrypt's rate limit - every time the container is recreated.
+#       WALLET_TLS_CACHE_DIR: "/data/certs"
+#       WALLET_DB_PATH: "/data/wallet.db"
+#       WALLET_BLOB_DIR: "/data/blobs"
+#       WALLET_JWT_SECRET: "${WALLET_JWT_SECRET:?WALLET_JWT_SECRET must be set, at least 32 bytes}"
+#       WALLET_BOOTSTRAP_TOKEN: "${WALLET_BOOTSTRAP_TOKEN:?WALLET_BOOTSTRAP_TOKEN must be set}"
+#       WALLET_ADMIN_TOKEN: "${WALLET_ADMIN_TOKEN:-}"
+#       WALLET_LOG_LEVEL: "${WALLET_LOG_LEVEL:-info}"
+#       WALLET_TOMBSTONE_DAYS: "${WALLET_TOMBSTONE_DAYS:-90}"
+#     volumes:
+#       - wallet-data:/data
+#
+# volumes:
+#   wallet-data:

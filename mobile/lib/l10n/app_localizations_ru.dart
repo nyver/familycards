@@ -30,6 +30,32 @@ class AppLocalizationsRu extends AppLocalizations {
       'Похоже, это не сервер Family Card Wallet.';
 
   @override
+  String get certificateFingerprintLabel =>
+      'Отпечаток сертификата (необязательно)';
+
+  @override
+  String get certificateFingerprintHelper =>
+      'Вставьте отпечаток SHA-256 из журнала запуска сервера, чтобы проверить его перед подключением.';
+
+  @override
+  String get certificateFingerprintInvalid =>
+      'Введите корректный 32-байтовый отпечаток SHA-256 (64 шестнадцатеричных символа, с разделителями или без них).';
+
+  @override
+  String get certificateMismatchMessage =>
+      'Сертификат сервера не совпадает с этим отпечатком.';
+
+  @override
+  String get certificateConfirmTitle => 'Проверьте сертификат сервера';
+
+  @override
+  String get certificateConfirmBody =>
+      'Этому сертификату не доверяет автоматически ваше устройство. Сравните отпечаток ниже с тем, что выведен в журнале запуска сервера, прежде чем продолжить — пропустить эту проверку нельзя.';
+
+  @override
+  String get certificateConfirmButton => 'Совпадает, закрепить';
+
+  @override
   String get startCreateVault => 'Создать семейный сейф';
 
   @override
@@ -205,6 +231,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get colorLabel => 'Цвет';
+
+  @override
+  String get cardEditorLogoPreviewLabel => 'Предпросмотр логотипа';
 
   @override
   String get customFieldsSection => 'Пользовательские поля';
@@ -586,6 +615,42 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serverSettingsChangeAddressButton => 'Сменить сервер';
+
+  @override
+  String get serverSettingsCertificateTitle => 'Закрепление сертификата';
+
+  @override
+  String get serverSettingsCertificateNotPinned =>
+      'Не закреплён — используются системные центры сертификации';
+
+  @override
+  String get serverSettingsCertificatePinButton => 'Закрепить сертификат';
+
+  @override
+  String get serverSettingsCertificateReplaceButton => 'Заменить';
+
+  @override
+  String get serverSettingsCertificateRemoveButton => 'Снять';
+
+  @override
+  String get serverSettingsCertificateMismatchNotice =>
+      'Синхронизация не работает: сертификат сервера больше не совпадает с закреплённым отпечатком. Замените или снимите закрепление, чтобы продолжить.';
+
+  @override
+  String get serverSettingsCertificateAcmeWarningTitle =>
+      'Этот сертификат публично доверенный';
+
+  @override
+  String get serverSettingsCertificateAcmeWarningBody =>
+      'Этот сертификат также проходит проверку через системные центры сертификации — обычно это значит, что он продлевается автоматически. При продлении отпечаток изменится, и закрепление нужно будет обновить.';
+
+  @override
+  String get serverSettingsCertificateRemoveConfirmTitle =>
+      'Снять закрепление сертификата?';
+
+  @override
+  String get serverSettingsCertificateRemoveConfirmBody =>
+      'Приложение вернётся к обычной проверке сертификата этого сервера через системные центры сертификации.';
 
   @override
   String get logoutConfirmTitle => 'Выйти?';

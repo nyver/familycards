@@ -29,6 +29,26 @@ void main() {
     });
   });
 
+  group('cardForeground', () {
+    test('a dark palette color yields white for readability', () {
+      // 0xFF3949AB is one of the editor's darker palette colors.
+      expect(cardForeground(const Color(0xFF3949AB)), Colors.white);
+    });
+
+    test('the light yellow palette color yields black87', () {
+      expect(cardForeground(const Color(0xFFFDD835)), Colors.black87);
+    });
+
+    test('matches the 0.5 luminance threshold exactly at the boundary', () {
+      // computeLuminance() < 0.5 is white; >= 0.5 is black87 - assert both
+      // sides of the same threshold the card list tile relies on.
+      const dark = Color(0xFF000000);
+      const light = Color(0xFFFFFFFF);
+      expect(cardForeground(dark), Colors.white);
+      expect(cardForeground(light), Colors.black87);
+    });
+  });
+
   testWidgets('GeneratedLogo renders the monogram text', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

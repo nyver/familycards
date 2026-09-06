@@ -71,16 +71,27 @@ func LimitBody(next http.Handler) http.Handler {
 	})
 }
 
-// EnforceHTTPS rejects requests that did not arrive over HTTPS, as reported
-// by a trusted reverse proxy's X-Forwarded-Proto header. When allowInsecure
-// is true (local development only) the check is skipped.
-func EnforceHTTPS(allowInsecure bool) func(http.Handler) http.Handler {
+// EnforceHTTPS rejects requests that did not arrive over HTTPS. When
+// tlsTerminatedLocally is false (the "off" mode - TLS terminated by an
+// external reverse proxy), security is decided by a trusted proxy's
+// X-Forwarded-Proto header, exactly as before this parameter existed. When
+// tlsTerminatedLocally is true (the server terminates TLS itself: acme,
+// file, or selfsigned mode), X-Forwarded-Proto is not consulted at all -
+// even as a fallback - since there is no proxy in front of the server to
+// have set it, and a client could otherwise forge the header over a
+// plaintext connection; only r.TLS != nil is accepted. When allowInsecure
+// is true (local development only) the check is skipped entirely.
+func EnforceHTTPS(tlsTerminatedLocally, allowInsecure bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if allowInsecure {
 			return next
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("X-Forwarded-Proto") != "https" {
+			secure := r.Header.Get("X-Forwarded-Proto") == "https"
+			if tlsTerminatedLocally {
+				secure = r.TLS != nil
+			}
+			if !secure {
 				WriteError(w, ErrBadRequest("HTTPS required"))
 				return
 			}

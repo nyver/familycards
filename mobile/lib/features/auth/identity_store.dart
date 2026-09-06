@@ -64,6 +64,8 @@ class IdentityStore {
 
   static const _identityKey = 'identity.current';
   static const _serverAddressKey = 'identity.server_address';
+  static const _pinnedFingerprintKey =
+      'identity.server_certificate_fingerprint';
 
   IdentityStore({KeyValueStore? storage})
     : _storage = storage ?? SecureKeyValueStore();
@@ -72,6 +74,22 @@ class IdentityStore {
 
   Future<void> setServerAddress(String address) =>
       _storage.write(_serverAddressKey, address);
+
+  /// The SHA-256 fingerprint pinned to the current server address (see
+  /// core/net/certificate_fingerprint.dart for the canonical string
+  /// form), or null if the connection relies on ordinary system-root TLS
+  /// verification.
+  Future<String?> getPinnedCertificateFingerprint() =>
+      _storage.read(_pinnedFingerprintKey);
+
+  /// Sets or clears (when [fingerprint] is null) the pin for the current
+  /// server address.
+  Future<void> setPinnedCertificateFingerprint(String? fingerprint) {
+    if (fingerprint == null) {
+      return _storage.delete(_pinnedFingerprintKey);
+    }
+    return _storage.write(_pinnedFingerprintKey, fingerprint);
+  }
 
   Future<StoredIdentity?> load() async {
     final raw = await _storage.read(_identityKey);
@@ -84,12 +102,14 @@ class IdentityStore {
     await setServerAddress(identity.serverAddress);
   }
 
-  /// Clears the identity and server address - used when switching to a
-  /// different server (which invalidates all local state, including
-  /// which server to talk to).
+  /// Clears the identity, server address, and pinned certificate
+  /// fingerprint - used when switching to a different server (which
+  /// invalidates all local state, including which server to talk to and
+  /// what certificate to expect from it).
   Future<void> clearAll() async {
     await _storage.delete(_identityKey);
     await _storage.delete(_serverAddressKey);
+    await _storage.delete(_pinnedFingerprintKey);
   }
 
   /// Clears only the identity, keeping the server address - used for
