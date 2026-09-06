@@ -154,6 +154,8 @@
   "@colorLabel": {},
   "cardEditorLogoPreviewLabel": "Logo preview",
   "@cardEditorLogoPreviewLabel": {},
+  "cardEditorRemoveLogoButton": "Remove logo",
+  "@cardEditorRemoveLogoButton": {},
   "customFieldsSection": "Custom fields",
   "@customFieldsSection": {},
   "addCustomField": "Add field",

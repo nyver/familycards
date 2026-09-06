@@ -79,6 +79,7 @@
   "noteLabel": "Заметка",
   "colorLabel": "Цвет",
   "cardEditorLogoPreviewLabel": "Предпросмотр логотипа",
+  "cardEditorRemoveLogoButton": "Убрать логотип",
   "customFieldsSection": "Пользовательские поля",
   "addCustomField": "Добавить поле",
   "customFieldKeyLabel": "Название поля",

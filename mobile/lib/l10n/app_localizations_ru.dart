@@ -236,6 +236,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardEditorLogoPreviewLabel => 'Предпросмотр логотипа';
 
   @override
+  String get cardEditorRemoveLogoButton => 'Убрать логотип';
+
+  @override
   String get customFieldsSection => 'Пользовательские поля';
 
   @override

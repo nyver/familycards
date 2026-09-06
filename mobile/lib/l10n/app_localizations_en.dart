@@ -236,6 +236,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardEditorLogoPreviewLabel => 'Logo preview';
 
   @override
+  String get cardEditorRemoveLogoButton => 'Remove logo';
+
+  @override
   String get customFieldsSection => 'Custom fields';
 
   @override

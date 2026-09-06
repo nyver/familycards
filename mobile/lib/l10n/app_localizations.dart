@@ -500,6 +500,12 @@ abstract class AppLocalizations {
   /// **'Logo preview'**
   String get cardEditorLogoPreviewLabel;
 
+  /// No description provided for @cardEditorRemoveLogoButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove logo'**
+  String get cardEditorRemoveLogoButton;
+
   /// No description provided for @customFieldsSection.
   ///
   /// In en, this message translates to:

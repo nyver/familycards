@@ -148,4 +148,62 @@ void main() {
 
     await database.close();
   });
+
+  testWidgets(
+    'the remove-logo button detaches a catalog logo and falls back to the '
+    "monogram, tracking the card's own color again",
+    (tester) async {
+      final card = await createCard(
+        storeName: 'Pyaterochka',
+        color: 0xFF008C44,
+        logoAsset: 'assets/stores/logos/pyaterochka.webp',
+      );
+      await pumpEditor(tester, card);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final removeButton = find.widgetWithText(
+        TextButton,
+        l10n.cardEditorRemoveLogoButton,
+      );
+      expect(
+        removeButton,
+        findsOneWidget,
+        reason: 'the button must be offered whenever a catalog logo is set',
+      );
+
+      await tester.tap(removeButton);
+      await tester.pump();
+
+      expect(find.byType(Image), findsNothing);
+      expect(find.byType(GeneratedLogo), findsOneWidget);
+      final logo = tester.widget<GeneratedLogo>(find.byType(GeneratedLogo));
+      expect(logo.foreground, cardForeground(const Color(0xFF008C44)));
+      expect(
+        find.widgetWithText(TextButton, l10n.cardEditorRemoveLogoButton),
+        findsNothing,
+        reason: 'nothing left to remove once the logo is already cleared',
+      );
+
+      await database.close();
+    },
+  );
+
+  testWidgets(
+    'no remove-logo button is offered for a generated monogram',
+    (tester) async {
+      final card = await createCard(
+        storeName: 'Corner Shop',
+        color: 0xFF3949AB,
+      );
+      await pumpEditor(tester, card);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.widgetWithText(TextButton, l10n.cardEditorRemoveLogoButton),
+        findsNothing,
+      );
+
+      await database.close();
+    },
+  );
 }

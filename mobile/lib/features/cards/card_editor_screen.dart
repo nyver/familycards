@@ -100,6 +100,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     _noteController.text,
     _format,
     _color,
+    _logoAsset,
     _customFields.map((f) => '${f.k}=${f.v}').join(','),
     _frontBlob,
     _backBlob,
@@ -211,6 +212,15 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 
   void _removeCustomField(int index) {
     setState(() => _customFields = [..._customFields]..removeAt(index));
+  }
+
+  /// Detaches the catalog's brand logo, falling back to the generated
+  /// monogram - which does track the selected color, unlike a bundled
+  /// brand image. Lets a card keep a catalog-suggested store name/format
+  /// without being stuck with a logo whose fixed brand color doesn't
+  /// match whatever color the user picked afterward.
+  void _clearLogo() {
+    setState(() => _logoAsset = null);
   }
 
   Future<void> _save() async {
@@ -328,9 +338,20 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               ),
             ],
             const SizedBox(height: 16),
-            Text(
-              l10n.cardEditorLogoPreviewLabel,
-              style: Theme.of(context).textTheme.titleSmall,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.cardEditorLogoPreviewLabel,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                if (_logoAsset != null)
+                  TextButton.icon(
+                    onPressed: _clearLogo,
+                    icon: const Icon(Icons.close, size: 18),
+                    label: Text(l10n.cardEditorRemoveLogoButton),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             _LogoPreview(
